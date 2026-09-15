@@ -47,3 +47,12 @@
  *      --header-height: 70px;
  *    }
  */
+
+@layer components {
+  /* "Delivered" tracking layered on top of the shipment state machine
+   * (see Spree::ShipmentDecorator). Same green treatment as the Paid and
+   * Shipped status badges. */
+  .badge-delivered {
+    @apply border border-transparent bg-green-200 text-green-900;
+  }
+}

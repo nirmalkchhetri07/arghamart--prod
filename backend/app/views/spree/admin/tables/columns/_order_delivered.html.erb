@@ -1,0 +1,6 @@
+<%# locals: (record:, column:, value:) %>
+<% if record.shipments.any? && record.shipments.all?(&:delivered?) %>
+  <%= shipment_delivered_badge(record.shipments.max_by(&:delivered_at)) %>
+<% else %>
+  <span class="text-gray-400">-</span>
+<% end %>

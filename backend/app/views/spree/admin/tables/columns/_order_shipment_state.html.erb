@@ -1,0 +1,7 @@
+<%# locals: (record:, column:, value:) %>
+<%# Overrides spree_admin's Shipment State column cell: when the order is
+  fully delivered (see Spree::Admin::ShipmentDeliveryHelper#order_delivered_badge
+  — ALL shipments delivered, same rule as the order header badge), show the
+  green "Delivered" badge INSTEAD OF "Shipped" in this same column.
+  Reuses the existing helper; no delivered-checking logic is duplicated here. %>
+<%= order_delivered_badge(record) || order_shipment_state(record) %>

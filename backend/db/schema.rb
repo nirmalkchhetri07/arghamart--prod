@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_28_105403) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1708,6 +1708,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_105403) do
     t.decimal "adjustment_total", precision: 10, scale: 2, default: "0.0"
     t.decimal "cost", precision: 10, scale: 2, default: "0.0"
     t.datetime "created_at", null: false
+    t.datetime "delivered_at"
     t.decimal "included_tax_total", precision: 10, scale: 2, default: "0.0", null: false
     t.decimal "non_taxable_adjustment_total", precision: 10, scale: 2, default: "0.0", null: false
     t.string "number"

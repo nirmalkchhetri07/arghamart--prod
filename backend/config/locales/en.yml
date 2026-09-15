@@ -1,2 +1,12 @@
 en:
   hello: "Hello world"
+  spree:
+    # "Delivered" tracking layered on top of the shipment state machine
+    # (see Spree::ShipmentDecorator).
+    mark_as_delivered: "Mark as Delivered"
+    delivered: "Delivered"
+    shipment_successfully_delivered: "Shipment successfully marked as delivered"
+    shipment_already_delivered: "Shipment is already marked as delivered"
+    cannot_mark_as_delivered: "Shipment cannot be marked as delivered"
+    shipment_states:
+      delivered: "Delivered"

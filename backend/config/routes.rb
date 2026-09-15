@@ -1,4 +1,3 @@
-
 Rails.application.routes.draw do
   Spree::Core::Engine.add_routes do
     # Admin authentication
@@ -13,6 +12,19 @@ Rails.application.routes.draw do
       path: :admin_user,
       router_name: :spree
     )
+
+    # "Delivered" tracking action for shipments (see
+    # Spree::Admin::ShipmentsControllerDecorator). Reopening the resource
+    # only adds this member route — existing shipment routes are untouched.
+    namespace :admin, path: Spree.admin_path do
+      resources :orders do
+        resources :shipments, only: [] do
+          member do
+            post :mark_as_delivered
+          end
+        end
+      end
+    end
   end
   # This line mounts Spree's routes at the root of your application.
   # This means, any requests to URLs such as /products, will go to

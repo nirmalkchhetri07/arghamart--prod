@@ -1,16 +1,17 @@
 "use client";
 
-import type { Address, Fulfillment, Order } from "@spree/sdk";
+import type { Address, Order } from "@spree/sdk";
 import { CircleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AddressBlock } from "@/components/order/AddressBlock";
+import type { FulfillmentWithDelivery } from "@/components/order/delivery";
 import { LineItemCard } from "@/components/order/LineItemCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { getFulfillmentStatusColor } from "@/lib/utils/format";
 
 interface FulfillmentBlockProps {
-  fulfillment: Fulfillment;
+  fulfillment: FulfillmentWithDelivery;
   shipAddress: Address | null;
   basePath: string;
   lineItems: Order["items"];
@@ -50,11 +51,19 @@ export function FulfillmentBlock({
                   })}
                 </p>
               )}
-              <span
-                className={`inline-flex items-center mt-2 px-2.5 py-0.5 rounded-lg text-xs font-medium capitalize ${getFulfillmentStatusColor(fulfillment.status)}`}
-              >
-                {fulfillment.status}
-              </span>
+              {fulfillment.delivered === true ? (
+                <span
+                  className={`inline-flex items-center mt-2 px-2.5 py-0.5 rounded-lg text-xs font-medium capitalize ${getFulfillmentStatusColor("delivered")}`}
+                >
+                  {t("delivered")}
+                </span>
+              ) : (
+                <span
+                  className={`inline-flex items-center mt-2 px-2.5 py-0.5 rounded-lg text-xs font-medium capitalize ${getFulfillmentStatusColor(fulfillment.status)}`}
+                >
+                  {fulfillment.status}
+                </span>
+              )}
             </div>
             <div className="mt-4 lg:mt-0">
               {fulfillment.status === "shipped" && fulfillment.tracking_url ? (

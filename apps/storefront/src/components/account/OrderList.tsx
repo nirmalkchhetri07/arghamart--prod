@@ -1,6 +1,7 @@
 import type { Order } from "@spree/sdk";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { isOrderDelivered } from "@/components/order/delivery";
 import { Button } from "@/components/ui/button";
 import {
   formatDate,
@@ -85,11 +86,19 @@ export async function OrderList({ orders, basePath, locale }: OrderListProps) {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium capitalize ${getFulfillmentStatusColor(order.fulfillment_status)}`}
-                  >
-                    {getStatusLabel(order.fulfillment_status ?? null, t)}
-                  </span>
+                  {isOrderDelivered(order.fulfillments) ? (
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium capitalize ${getFulfillmentStatusColor("delivered")}`}
+                    >
+                      {t("delivered")}
+                    </span>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium capitalize ${getFulfillmentStatusColor(order.fulfillment_status)}`}
+                    >
+                      {getStatusLabel(order.fulfillment_status ?? null, t)}
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <span className="text-sm font-medium text-gray-900">
