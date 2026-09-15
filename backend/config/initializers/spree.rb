@@ -34,6 +34,8 @@ Spree.dependencies do |dependencies|
 end
 
 Rails.application.config.after_initialize do
+  Spree.payment_methods << Spree::PaymentMethod::Esewa
+  Spree.payment_methods << Spree::PaymentMethod::Khalti
   # Spree.shipping_methods << Spree::ShippingMethods::SuperExpensiveNotVeryFastShipping
   # Spree.payment_methods << Spree::PaymentMethods::VerySafeAndReliablePaymentMethod
 

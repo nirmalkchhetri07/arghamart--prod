@@ -55,6 +55,8 @@ describe("ConfirmPaymentPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSearchParams = new URLSearchParams();
+    window.sessionStorage.clear();
+    window.localStorage.clear();
   });
 
   it("shows loading spinner", async () => {
@@ -85,6 +87,7 @@ describe("ConfirmPaymentPage", () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       );
       expect(mockReplace).toHaveBeenCalledWith("/us/en/order-placed/cart-1");
     });
@@ -107,6 +110,7 @@ describe("ConfirmPaymentPage", () => {
         "cart-1",
         "session-1",
         "eyJhYmMiOiJ4eXoifQ==",
+        undefined,
         undefined,
         undefined,
       );
@@ -144,6 +148,7 @@ describe("ConfirmPaymentPage", () => {
     await waitFor(() => {
       expect(mockConfirm).toHaveBeenCalledWith(
         "cart-1",
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -203,5 +208,83 @@ describe("ConfirmPaymentPage", () => {
     await waitFor(() => {
       expect(mockConfirm).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("forwards the eSewa data param and resolves the session from storage", async () => {
+    window.sessionStorage.setItem(
+      "spree.redirect_session.cart-1",
+      JSON.stringify({ sessionId: "session-esewa", gateway: "esewa" }),
+    );
+    mockSearchParams.set("data", "ZXNld2EtcGF5bG9hZA==");
+    mockConfirm.mockResolvedValue({
+      success: true as const,
+      order: { id: "cart-1" },
+    });
+
+    await act(async () => {
+      renderPage();
+    });
+
+    await waitFor(() => {
+      expect(mockConfirm).toHaveBeenCalledWith(
+        "cart-1",
+        "session-esewa",
+        undefined,
+        undefined,
+        undefined,
+        { data: "ZXNld2EtcGF5bG9hZA==" },
+      );
+      expect(mockReplace).toHaveBeenCalledWith("/us/en/order-placed/cart-1");
+    });
+  });
+
+  it("forwards the Khalti pidx param and resolves the session from storage", async () => {
+    window.sessionStorage.setItem(
+      "spree.redirect_session.cart-1",
+      JSON.stringify({ sessionId: "session-khalti", gateway: "khalti" }),
+    );
+    mockSearchParams.set("pidx", "bZQLD9wRVWo4CdESSfuSsB");
+    mockConfirm.mockResolvedValue({
+      success: true as const,
+      order: { id: "cart-1" },
+    });
+
+    await act(async () => {
+      renderPage();
+    });
+
+    await waitFor(() => {
+      expect(mockConfirm).toHaveBeenCalledWith(
+        "cart-1",
+        "session-khalti",
+        undefined,
+        undefined,
+        undefined,
+        { pidx: "bZQLD9wRVWo4CdESSfuSsB" },
+      );
+    });
+  });
+
+  it("clears the stored redirect session after confirming", async () => {
+    window.sessionStorage.setItem(
+      "spree.redirect_session.cart-1",
+      JSON.stringify({ sessionId: "session-esewa", gateway: "esewa" }),
+    );
+    mockSearchParams.set("data", "ZXNld2EtcGF5bG9hZA==");
+    mockConfirm.mockResolvedValue({
+      success: true as const,
+      order: { id: "cart-1" },
+    });
+
+    await act(async () => {
+      renderPage();
+    });
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/us/en/order-placed/cart-1");
+    });
+    expect(
+      window.sessionStorage.getItem("spree.redirect_session.cart-1"),
+    ).toBeNull();
   });
 });

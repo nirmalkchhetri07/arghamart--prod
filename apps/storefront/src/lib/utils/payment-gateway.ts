@@ -9,7 +9,14 @@
  */
 
 /** Known gateway identifiers for conditional SDK loading */
-export type GatewayId = "stripe" | "adyen" | "paypal" | "razorpay" | "unknown";
+export type GatewayId =
+  | "stripe"
+  | "adyen"
+  | "paypal"
+  | "razorpay"
+  | "esewa"
+  | "khalti"
+  | "unknown";
 
 /**
  * Map Spree PaymentMethod.type (API shorthand) → frontend gateway ID.
@@ -49,14 +56,43 @@ const GATEWAY_TYPE_MAP: Record<string, GatewayId> = {
   razorpay: "razorpay",
   "SpreeRazorpayCheckout::Gateway": "razorpay",
   "Spree::Gateway::RazorpayGateway": "razorpay",
+  // eSewa (Spree::PaymentMethod::Esewa — redirect + server-side verify,
+  // no client SDK). The Store API exposes the STI class name.
+  esewa: "esewa",
+  "Spree::PaymentMethod::Esewa": "esewa",
+  "SpreeEsewa::Gateway": "esewa",
+  "Spree::Gateway::EsewaGateway": "esewa",
+  // Khalti (Spree::PaymentMethod::Khalti — redirect + server-side lookup,
+  // no client SDK). The Store API exposes the STI class name.
+  khalti: "khalti",
+  "Spree::PaymentMethod::Khalti": "khalti",
+  "SpreeKhalti::Gateway": "khalti",
+  "Spree::Gateway::KhaltiGateway": "khalti",
 };
 
 /**
  * Resolve a Spree PaymentMethod.type to a frontend gateway identifier.
  * Returns "unknown" for unrecognised session-based gateways.
+ *
+ * Falls back to a case-insensitive substring match for eSewa/Khalti so
+ * future backend class-name variants keep working without a map update.
  */
 export function resolveGatewayId(paymentMethodType: string): GatewayId {
-  return GATEWAY_TYPE_MAP[paymentMethodType] ?? "unknown";
+  const direct = GATEWAY_TYPE_MAP[paymentMethodType];
+  if (direct) return direct;
+  const lowered = paymentMethodType.toLowerCase();
+  if (lowered.includes("esewa")) return "esewa";
+  if (lowered.includes("khalti")) return "khalti";
+  return "unknown";
+}
+
+/**
+ * Whether the gateway redirects the customer offsite (no in-page form).
+ * Redirect gateways create their payment session at submit time — after
+ * shipping is confirmed, so the amount is final — instead of on mount.
+ */
+export function isRedirectGatewayId(gatewayId: GatewayId): boolean {
+  return gatewayId === "esewa" || gatewayId === "khalti";
 }
 
 /** Whether PayPal is configured (client ID present in env). */

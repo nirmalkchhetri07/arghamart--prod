@@ -1,56 +1,57 @@
-import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import { Button } from "@/components/ui/button";
-import { getStoreName } from "@/lib/store";
+import type { Category } from "@spree/sdk";
+import { CategoryCarousel } from "@/components/home/CategoryCarousel";
+import { HeroSlider } from "@/components/home/HeroSlider";
+import { PromoCards } from "@/components/home/PromoCards";
+import { getCategories } from "@/lib/data/categories";
+import { findCategoryImage, HERO_SLIDES, PROMOTIONS } from "@/lib/data/home";
 
 interface HeroSectionProps {
   basePath: string;
   locale: string;
 }
 
-export async function HeroSection({ basePath, locale }: HeroSectionProps) {
-  const t = await getTranslations({
-    locale: locale as Locale,
-    namespace: "home",
-  });
-  const storeName = getStoreName();
+function flattenCategories(categories: Category[]): Category[] {
+  return categories.flatMap((category) => [
+    category,
+    ...(category.children ?? []),
+  ]);
+}
 
-  /* Demo-only: Remove for production. */
-  const githubUrl = "https://github.com/spree/storefront";
-  const quickstartUrl =
-    "https://spreecommerce.org/docs/developer/getting-started/quickstart";
+export async function HeroSection({ basePath, locale }: HeroSectionProps) {
+  let categories: Category[] = [];
+
+  try {
+    const response = await getCategories(
+      { depth_eq: 0, expand: ["children"] },
+      { locale },
+    );
+    categories = flattenCategories(response.data ?? []).slice(0, 16);
+  } catch (error) {
+    console.error("HeroSection: failed to load categories", error);
+  }
+
+  const slides = HERO_SLIDES.map((slide) => ({
+    ...slide,
+    imageUrl: findCategoryImage(categories, slide.categoryHint) ?? undefined,
+    href:
+      slide.ctaHref ??
+      (slide.productSlug
+        ? `${basePath}/products/${slide.productSlug}`
+        : `${basePath}/products`),
+  }));
 
   return (
-    <section className="border-b border-gray-200 min-h-[823px] md:min-h-0 flex items-center">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
-        <div className="text-center">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
-            {t("welcome", { storeName })}
-          </h1>
-          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            {t("heroDescription")}
-          </p>
-          <div className="mt-8 flex justify-center gap-4 flex-wrap">
-            <Button size="lg" asChild>
-              <Link href={`${basePath}/products`}>{t("shopNow")}</Link>
-            </Button>
-            {/* Demo-only: Remove for production. */}
-            <Button variant="outline" size="lg" asChild>
-              <Link href={githubUrl} target="_blank" rel="noopener noreferrer">
-                {t("forkOnGithub")}
-              </Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild>
-              <Link
-                href={quickstartUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t("quickstartGuide")} &rarr;
-              </Link>
-            </Button>
-          </div>
+    <section className="border-b border-border/70 bg-[#fbfcfe]">
+      <div className="container mx-auto px-4 pb-8 pt-5 sm:px-6 sm:pb-10 lg:px-8 lg:pt-7">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:items-stretch">
+          <HeroSlider slides={slides} />
+          <PromoCards
+            promotions={PROMOTIONS}
+            categories={categories}
+            basePath={basePath}
+          />
         </div>
+        <CategoryCarousel categories={categories} basePath={basePath} />
       </div>
     </section>
   );

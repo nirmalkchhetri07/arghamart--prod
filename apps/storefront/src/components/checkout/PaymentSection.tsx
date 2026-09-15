@@ -26,6 +26,14 @@ import {
   type AdyenPaymentFormHandle,
 } from "@/components/checkout/AdyenPaymentForm";
 import {
+  EsewaPaymentForm,
+  type EsewaPaymentFormHandle,
+} from "@/components/checkout/EsewaPaymentForm";
+import {
+  KhaltiPaymentForm,
+  type KhaltiPaymentFormHandle,
+} from "@/components/checkout/KhaltiPaymentForm";
+import {
   PayPalPaymentForm,
   type PayPalPaymentFormHandle,
 } from "@/components/checkout/PayPalPaymentForm";
@@ -51,7 +59,10 @@ import {
 } from "@/lib/utils/address";
 import { getCardIconType, getCardLabel } from "@/lib/utils/credit-card";
 import { extractBasePath } from "@/lib/utils/path";
-import { resolveGatewayId } from "@/lib/utils/payment-gateway";
+import {
+  isRedirectGatewayId,
+  resolveGatewayId,
+} from "@/lib/utils/payment-gateway";
 
 export type PaymentCompleteResult =
   | { type: "session"; sessionId: string; sessionResult?: string }
@@ -168,6 +179,8 @@ export function PaymentSection({
     | StripePaymentFormHandle
     | AdyenPaymentFormHandle
     | PayPalPaymentFormHandle
+    | EsewaPaymentFormHandle
+    | KhaltiPaymentFormHandle
     | null
   >(null);
   const initRef = useRef(false);
@@ -179,12 +192,22 @@ export function PaymentSection({
       handle:
         | StripePaymentFormHandle
         | AdyenPaymentFormHandle
-        | PayPalPaymentFormHandle,
+        | PayPalPaymentFormHandle
+        | EsewaPaymentFormHandle
+        | KhaltiPaymentFormHandle,
     ) => {
       gatewayHandleRef.current = handle;
     },
     [],
   );
+
+  // Redirect gateways (eSewa/Khalti) create their payment session at submit
+  // time — after shipping is confirmed — so no early session is needed.
+  const selectedGatewayId = selectedMethod?.session_required
+    ? resolveGatewayId(selectedMethod.type)
+    : null;
+  const isRedirectGateway =
+    selectedGatewayId != null && isRedirectGatewayId(selectedGatewayId);
 
   // ── Session management ──────────────────────────────────────────────
   const createSession = useCallback(
@@ -252,11 +275,13 @@ export function PaymentSection({
   const selectedCardRef = useRef<string | null>(null);
 
   // On mount: load saved cards (if authenticated + session method), then create initial session
+  // Redirect gateways skip this — their session is created at submit time.
   useEffect(() => {
     if (initRef.current) return;
     if (!selectedMethod) return;
     if (isZeroAmount) return;
     if (!isSessionBased) return;
+    if (isRedirectGateway) return;
 
     initRef.current = true;
 
@@ -294,6 +319,7 @@ export function PaymentSection({
   }, [
     selectedMethod,
     isSessionBased,
+    isRedirectGateway,
     isAuthenticated,
     createSession,
     cart.total,
@@ -308,6 +334,7 @@ export function PaymentSection({
   useEffect(() => {
     if (!initRef.current) return;
     if (!isSessionBased || !selectedMethod) return;
+    if (isRedirectGateway) return;
     if (lastTotalRef.current === cart.total) return;
 
     lastTotalRef.current = cart.total;
@@ -354,6 +381,7 @@ export function PaymentSection({
     cart.total,
     createSession,
     isSessionBased,
+    isRedirectGateway,
     paymentSessionId,
     selectedMethod,
   ]);
@@ -386,7 +414,10 @@ export function PaymentSection({
     const newMethod = paymentMethods.find((pm) => pm.id === methodId);
     if (!newMethod) return;
 
-    if (newMethod.session_required) {
+    if (
+      newMethod.session_required &&
+      !isRedirectGatewayId(resolveGatewayId(newMethod.type))
+    ) {
       // Switching to a session-based method: create session
       // Reset saved cards state — will be re-initialized
       if (!initRef.current) {
@@ -556,6 +587,34 @@ export function PaymentSection({
 
             // 2. Process payment based on method type
             if (selectedMethod.session_required) {
+              const gatewayId = resolveGatewayId(selectedMethod.type);
+
+              // Redirect flow (eSewa, Khalti): the gateway form creates a
+              // fresh session now — after shipping is confirmed, so the
+              // amount is final — then navigates the browser offsite. Order
+              // completion happens when the gateway redirects back to the
+              // confirm-payment page.
+              if (isRedirectGatewayId(gatewayId)) {
+                if (!gatewayHandleRef.current) {
+                  setProcessing(false);
+                  return { error: t("failedToInitPayment") };
+                }
+                const redirectBasePath = extractBasePath(
+                  window.location.pathname,
+                );
+                const redirectReturnUrl = `${window.location.origin}${redirectBasePath}/confirm-payment/${cart.id}`;
+                const redirectOutcome =
+                  await gatewayHandleRef.current.confirmPayment(
+                    redirectReturnUrl,
+                  );
+                if (redirectOutcome.error) {
+                  setGatewayError(redirectOutcome.error);
+                  setProcessing(false);
+                  return { error: redirectOutcome.error };
+                }
+                return {};
+              }
+
               // Session-based flow (Stripe, Adyen, etc.)
               if (!paymentSessionId || !sessionExternalData) {
                 setProcessing(false);
@@ -569,7 +628,6 @@ export function PaymentSection({
               const clientSecret = sessionExternalData.client_secret as
                 | string
                 | undefined;
-              const gatewayId = resolveGatewayId(selectedMethod.type);
               const isStripe = gatewayId === "stripe";
               const isApprovalDriven =
                 gatewayId === "adyen" || gatewayId === "paypal";
@@ -894,13 +952,16 @@ export function PaymentSection({
                       )}
 
                       {/* Gateway-specific payment form */}
+                      {/* Redirect gateways render without a pre-created session */}
                       {!loading &&
-                        sessionExternalData &&
+                        (sessionExternalData ||
+                          (pmGatewayId != null &&
+                            isRedirectGatewayId(pmGatewayId))) &&
                         (() => {
                           const ext = sessionExternalData;
                           switch (pmGatewayId) {
                             case "stripe": {
-                              const secret = ext.client_secret as
+                              const secret = ext?.client_secret as
                                 | string
                                 | undefined;
                               return (
@@ -917,10 +978,10 @@ export function PaymentSection({
                               );
                             }
                             case "adyen": {
-                              const sid = ext._external_id as
+                              const sid = ext?._external_id as
                                 | string
                                 | undefined;
-                              const sdata = ext.session_data as
+                              const sdata = ext?.session_data as
                                 | string
                                 | undefined;
                               return sid && sdata ? (
@@ -936,7 +997,7 @@ export function PaymentSection({
                               ) : null;
                             }
                             case "paypal": {
-                              const orderId = ext.id as string | undefined;
+                              const orderId = ext?.id as string | undefined;
                               return orderId ? (
                                 <div className="p-4">
                                   <PayPalPaymentForm
@@ -948,6 +1009,28 @@ export function PaymentSection({
                                   />
                                 </div>
                               ) : null;
+                            }
+                            case "esewa": {
+                              return (
+                                <div className="p-4">
+                                  <EsewaPaymentForm
+                                    cartId={cart.id}
+                                    paymentMethodId={pm.id}
+                                    onReady={handleGatewayReady}
+                                  />
+                                </div>
+                              );
+                            }
+                            case "khalti": {
+                              return (
+                                <div className="p-4">
+                                  <KhaltiPaymentForm
+                                    cartId={cart.id}
+                                    paymentMethodId={pm.id}
+                                    onReady={handleGatewayReady}
+                                  />
+                                </div>
+                              );
                             }
                             default:
                               return (

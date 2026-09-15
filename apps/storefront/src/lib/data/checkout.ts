@@ -47,6 +47,11 @@ export type VerifiedSurface = Surface | "unverified";
  * The extra fetch only runs when wholesale is enabled and the cookie didn't
  * already resolve the cart.
  *
+ * Both surfaces' credentials are tried: a guest DTC cart only carries a DTC
+ * order token, so fetching with the wholesale token alone would miss it even
+ * though the browser holds a valid token. Whichever fetch hits, the cart's own
+ * `channel_id` decides — never the cookie.
+ *
  * Returns `"unverified"` when the wholesale lookup fails so the caller can fail
  * closed — a transient failure must not be mistaken for a confirmed DTC cart.
  */
@@ -64,10 +69,16 @@ export async function resolveSurfaceForCartVerified(
   // "dtc". Anything else (fetch threw, cart null, channel null) is "unverified"
   // so the caller fails closed instead of defaulting to DTC.
   try {
-    const [cart, channel] = await Promise.all([
+    const [dtcCart, wholesaleCart, channel] = await Promise.all([
+      getCart(cartId, "dtc"),
       getCart(cartId, "wholesale"),
       getWholesaleChannel(),
     ]);
+    // An explicit cart id skips the cross-surface guards in getCart, so each
+    // fetch only succeeds with that surface's valid credentials — a DTC guest
+    // token resolves via the DTC fetch, a wholesale JWT via either fetch with
+    // the cart's own channel_id breaking the tie.
+    const cart = dtcCart ?? wholesaleCart;
     if (!cart || !channel) return "unverified";
     if (cart.channel_id == null) return "unverified";
     return cart.channel_id === channel.id ? "wholesale" : "dtc";

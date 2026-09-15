@@ -26,7 +26,7 @@ function CheckoutHeader() {
     <header className="flex items-center justify-between h-16">
       <Link href={basePath || "/"} className="flex items-center space-x-2">
         <Image
-          src="/spree.png"
+          src="/Assets/logo-prod.png"
           alt={storeName}
           width={90}
           height={32}

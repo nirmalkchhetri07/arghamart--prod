@@ -35,7 +35,7 @@ interface Address {
   state_text?: string | null;
   postal_code?: string | null;
   country_name?: string | null;
-  phone?: string | null;
+  phone: string | null;
 }
 
 interface OrderConfirmationEmailProps {

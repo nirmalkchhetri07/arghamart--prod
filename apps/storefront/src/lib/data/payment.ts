@@ -157,6 +157,11 @@ export async function completeCheckoutOrder(
 /**
  * Confirms payment and completes the order after returning from an offsite
  * payment gateway (e.g. CashApp, 3D Secure).
+ *
+ * Redirect gateways (eSewa, Khalti) pass their return payload through
+ * `externalData` — e.g. `{ data }` (eSewa's base64 redirect payload) or
+ * `{ pidx }` (Khalti). The backend verifies server-to-server and never
+ * trusts the client payload for the verdict.
  */
 export async function confirmPaymentAndCompleteCart(
   cartId: string,
@@ -164,6 +169,7 @@ export async function confirmPaymentAndCompleteCart(
   sessionResult?: string,
   redirectResult?: string,
   adyenSessionId?: string,
+  externalData?: Record<string, unknown>,
 ): Promise<
   { success: true; order: unknown } | { success: false; error: string }
 > {
@@ -200,14 +206,16 @@ export async function confirmPaymentAndCompleteCart(
     if (sessionId) {
       const options = await getCartOptions(surface);
       const id = await requireCartId(surface);
+      const completeParams =
+        sessionResult || externalData
+          ? {
+              ...(sessionResult ? { session_result: sessionResult } : {}),
+              ...(externalData ? { external_data: externalData } : {}),
+            }
+          : undefined;
       const completeResult = await getClientForSurface(
         surface,
-      ).carts.paymentSessions.complete(
-        id,
-        sessionId,
-        sessionResult ? { session_result: sessionResult } : undefined,
-        options,
-      );
+      ).carts.paymentSessions.complete(id, sessionId, completeParams, options);
       if (completeResult.status === "failed") {
         return {
           success: false,

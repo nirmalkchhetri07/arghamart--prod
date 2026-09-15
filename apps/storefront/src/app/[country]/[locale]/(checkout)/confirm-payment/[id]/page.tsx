@@ -6,6 +6,10 @@ import { useTranslations } from "next-intl";
 import { use, useEffect, useRef } from "react";
 import { confirmPaymentAndCompleteCart } from "@/lib/data/payment";
 import { extractBasePath } from "@/lib/utils/path";
+import {
+  clearRedirectSession,
+  readRedirectSession,
+} from "@/lib/utils/redirect-payment-session";
 
 interface ConfirmPaymentPageProps {
   params: Promise<{
@@ -19,10 +23,17 @@ interface ConfirmPaymentPageProps {
  * Intermediate page that offsite payment gateways redirect to.
  *
  * When a customer returns from an offsite gateway (e.g. Stripe 3D Secure,
- * Adyen Klarna/iDEAL), the payment webhook may not have arrived yet. This page:
+ * Adyen Klarna/iDEAL, eSewa, Khalti), the payment webhook may not have
+ * arrived yet. This page:
  * 1. Tries to complete the payment session (tells Spree to check with the provider)
  * 2. If successful, completes the order and redirects to order-placed
  * 3. If failed, redirects back to checkout with an error
+ *
+ * eSewa/Khalti return URLs are baked into the payment session before the
+ * session id is known, so they can't echo `?session=` back. The session id
+ * is read from local storage (saved before the redirect) instead, and the
+ * gateway payload (`?data=` for eSewa, `?pidx=` for Khalti) is forwarded to
+ * the backend, which verifies server-to-server.
  */
 export default function ConfirmPaymentPage({
   params,
@@ -41,19 +52,36 @@ export default function ConfirmPaymentPage({
 
     // Stripe: ?session={spreeSessionId}
     // Adyen:  ?sessionId={adyenSessionId}&redirectResult=...
+    // eSewa:  ?data=<base64 payload> (success and failure URLs)
+    // Khalti: ?pidx=... (plus transaction_id, status, ...)
     const sessionId = searchParams.get("session");
     const sessionResult = searchParams.get("sessionResult");
     const redirectResult = searchParams.get("redirectResult");
     const adyenSessionId = searchParams.get("sessionId");
+    const esewaData = searchParams.get("data");
+    const khaltiPidx = searchParams.get("pidx");
+
+    // eSewa/Khalti can't echo the Spree session id — resolve it from the
+    // ref saved before the offsite redirect.
+    const storedRef = sessionId ? null : readRedirectSession(cartId);
+    const resolvedSessionId = sessionId ?? storedRef?.sessionId;
+
+    const externalData: Record<string, unknown> = {
+      ...(esewaData ? { data: esewaData } : {}),
+      ...(khaltiPidx ? { pidx: khaltiPidx } : {}),
+    };
 
     async function confirmAndRedirect() {
       const result = await confirmPaymentAndCompleteCart(
         cartId,
-        sessionId ?? undefined,
+        resolvedSessionId ?? undefined,
         sessionResult ?? undefined,
         redirectResult ?? undefined,
         adyenSessionId ?? undefined,
+        Object.keys(externalData).length > 0 ? externalData : undefined,
       );
+
+      clearRedirectSession(cartId);
 
       if (result.success) {
         // Cache the completed order for the thank-you page

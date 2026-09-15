@@ -112,4 +112,43 @@ describe("resolveSurfaceForCartVerified", () => {
 
     expect(surface).toBe("unverified");
   });
+
+  it("confirms dtc from the DTC fetch when the wholesale fetch misses (guest offsite return)", async () => {
+    // Guest DTC carts only carry a DTC order token, so the wholesale-surface
+    // fetch misses even though the browser holds a valid token.
+    mockGetCart.mockImplementation((id: string, surface: string) =>
+      Promise.resolve(
+        surface === "dtc" ? { id, channel_id: "dtc-chan" } : null,
+      ),
+    );
+    mockGetWholesaleChannel.mockResolvedValue({ id: "ws-chan" });
+
+    const surface = await resolveSurfaceForCartVerified("cart-x");
+
+    expect(surface).toBe("dtc");
+    expect(mockGetCart).toHaveBeenCalledWith("cart-x", "dtc");
+    expect(mockGetCart).toHaveBeenCalledWith("cart-x", "wholesale");
+  });
+
+  it("resolves wholesale from the wholesale fetch when the DTC fetch misses", async () => {
+    mockGetCart.mockImplementation((id: string, surface: string) =>
+      Promise.resolve(
+        surface === "wholesale" ? { id, channel_id: "ws-chan" } : null,
+      ),
+    );
+    mockGetWholesaleChannel.mockResolvedValue({ id: "ws-chan" });
+
+    const surface = await resolveSurfaceForCartVerified("cart-x");
+
+    expect(surface).toBe("wholesale");
+  });
+
+  it("fails closed (unverified) when both surface fetches miss", async () => {
+    mockGetCart.mockResolvedValue(null);
+    mockGetWholesaleChannel.mockResolvedValue({ id: "ws-chan" });
+
+    const surface = await resolveSurfaceForCartVerified("cart-x");
+
+    expect(surface).toBe("unverified");
+  });
 });

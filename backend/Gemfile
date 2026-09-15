@@ -89,6 +89,9 @@ group :development, :test do
   gem 'rubocop-rails-omakase', require: false
   gem 'simplecov-cobertura'
   gem 'spree_dev_tools'
+  # HTTP stubbing for gateway specs (eSewa status-check, Khalti
+  # initiate/lookup). Required in specs via `require 'webmock/rspec'`.
+  gem 'webmock', require: false
 end
 
 group :development do
