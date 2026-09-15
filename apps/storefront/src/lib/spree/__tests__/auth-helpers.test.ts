@@ -46,7 +46,7 @@ vi.mock("@spree/sdk", () => ({
   },
 }));
 
-import { ensureFreshSession } from "../auth-helpers";
+import { ensureFreshSession, withAuthRefresh } from "../auth-helpers";
 
 describe("ensureFreshSession refresh resilience", () => {
   beforeEach(() => {
@@ -112,5 +112,46 @@ describe("ensureFreshSession refresh resilience", () => {
     expect(state).toBe("refreshed");
     expect(mockCookieState.access).toBe("new-jwt");
     expect(mockCookieState.refresh).toBe("rt-2");
+  });
+});
+
+describe("withAuthRefresh without an access token", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockClient.auth.refresh.mockReset();
+    mockCookieState.access = undefined;
+    mockCookieState.refresh = "rt-1";
+  });
+
+  it("rotates the refresh token instead of throwing immediately", async () => {
+    mockClient.auth.refresh.mockResolvedValueOnce({
+      token: "new-jwt",
+      refresh_token: "rt-2",
+    });
+    const fn = vi.fn(async () => "ok");
+
+    const result = await withAuthRefresh(fn);
+
+    expect(result).toBe("ok");
+    expect(mockClient.auth.refresh).toHaveBeenCalledTimes(1);
+    expect(fn).toHaveBeenCalledWith({ token: "new-jwt" });
+  });
+
+  it("still throws 401 when there is no refresh token either", async () => {
+    mockCookieState.refresh = undefined;
+    const fn = vi.fn(async () => "ok");
+
+    await expect(withAuthRefresh(fn)).rejects.toThrow("Not authenticated");
+    expect(mockClient.auth.refresh).not.toHaveBeenCalled();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("still throws 401 when cookies cannot be persisted", async () => {
+    mockCanPersist.mockResolvedValueOnce(false);
+    const fn = vi.fn(async () => "ok");
+
+    await expect(withAuthRefresh(fn)).rejects.toThrow("Not authenticated");
+    expect(mockClient.auth.refresh).not.toHaveBeenCalled();
+    expect(fn).not.toHaveBeenCalled();
   });
 });

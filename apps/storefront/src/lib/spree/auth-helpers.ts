@@ -61,7 +61,18 @@ export async function getAuthOptions(): Promise<RequestOptions> {
 export async function withAuthRefresh<T>(
   fn: (options: RequestOptions) => Promise<T>,
 ): Promise<T> {
-  const options = await getAuthOptions();
+  let options = await getAuthOptions();
+
+  // No access token (e.g. the access cookie expired while the refresh token
+  // survives): try rotating the refresh token before giving up. This is a
+  // safe no-op when there is no refresh token or the current context can't
+  // persist the rotated cookies (Server Component render).
+  if (!options.token) {
+    const newToken = await tryRefresh();
+    if (newToken) {
+      options = { token: newToken };
+    }
+  }
 
   if (!options.token) {
     throw new SpreeError(
