@@ -558,29 +558,38 @@ function CheckoutPageContentInner({
     }
     setCart(freshOrder);
 
+    // eSewa/Khalti need a phone number at payment time, but the backend
+    // treats address phone as optional — enforce it here so Pay now is
+    // blocked with a visible address-section error when the phone is
+    // missing (e.g. a saved address without one, or a cleared field whose
+    // previously auto-saved address is still on the order).
+    const errorsBySection: Record<string, string[]> = {};
+    const shippingPhone = freshOrder.shipping_address?.phone?.trim();
+    if (!shippingPhone) {
+      errorsBySection.address = [t("phoneRequired")];
+    }
+
     // Check requirements — skip "payment" since we handle that via
     // the PaymentSection imperative submit (payment is created at confirmation time)
     const prePaymentReqs = (freshOrder.requirements || []).filter(
       (req) => req.step !== "payment",
     );
 
-    if (prePaymentReqs.length > 0) {
-      const errorsBySection: Record<string, string[]> = {};
-
-      for (const req of prePaymentReqs) {
-        // Map requirement steps to section IDs
-        const sectionId =
-          req.step === "address"
-            ? "address"
-            : req.step === "delivery"
-              ? "shipping"
-              : req.step;
-        if (!errorsBySection[sectionId]) {
-          errorsBySection[sectionId] = [];
-        }
-        errorsBySection[sectionId].push(req.message);
+    for (const req of prePaymentReqs) {
+      // Map requirement steps to section IDs
+      const sectionId =
+        req.step === "address"
+          ? "address"
+          : req.step === "delivery"
+            ? "shipping"
+            : req.step;
+      if (!errorsBySection[sectionId]) {
+        errorsBySection[sectionId] = [];
       }
+      errorsBySection[sectionId].push(req.message);
+    }
 
+    if (Object.keys(errorsBySection).length > 0) {
       setSectionErrors(errorsBySection);
 
       // Scroll to first error section

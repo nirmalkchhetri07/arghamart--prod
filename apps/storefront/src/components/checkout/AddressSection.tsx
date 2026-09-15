@@ -47,6 +47,7 @@ const REQUIRED_ADDRESS_FIELDS: (keyof AddressFormData)[] = [
   "city",
   "postal_code",
   "country_iso",
+  "phone",
 ];
 
 function isAddressComplete(address: AddressFormData): boolean {

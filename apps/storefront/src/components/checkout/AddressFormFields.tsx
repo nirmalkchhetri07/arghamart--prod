@@ -164,11 +164,12 @@ export function AddressFormFields({
         />
       </div>
 
-      {/* Phone */}
+      {/* Phone — required: eSewa/Khalti need it at payment time */}
       <Input
         type="tel"
         id={`${idPrefix}-phone`}
         aria-label={t("phone")}
+        required
         value={address.phone}
         onChange={(e) => onChange("phone", e.target.value)}
         placeholder={t("phone")}
