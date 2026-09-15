@@ -1,0 +1,65 @@
+version: 2
+updates:
+  # Root wrapper (@spree/cli, @spree/docs)
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      root-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      root-version:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
+  # Rails backend gems
+  - package-ecosystem: bundler
+    directory: "/backend"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      backend-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      backend-version:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
+  # CI workflows
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      actions-version:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
+  # Next.js storefront
+  - package-ecosystem: npm
+    directory: "/apps/storefront"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      storefront-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      storefront-version:
+        applies-to: version-updates
+        patterns:
+          - "*"

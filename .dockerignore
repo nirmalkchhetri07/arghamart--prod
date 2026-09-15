@@ -1,0 +1,11 @@
+# Build context for backend/Dockerfile (repo root): keep it to sources.
+**/node_modules
+**/.git
+.spree
+apps/storefront
+apps/dashboard/dist
+apps/dashboard/.tanstack
+backend/log
+backend/tmp
+backend/storage
+backend/.env*
