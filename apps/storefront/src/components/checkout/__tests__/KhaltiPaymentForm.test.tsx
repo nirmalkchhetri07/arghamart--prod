@@ -157,6 +157,30 @@ describe("KhaltiPaymentForm", () => {
     ).toBeNull();
   });
 
+  it("clears a shown error via clearError", async () => {
+    mockCreate.mockResolvedValue({
+      success: false,
+      error: "Khalti is down",
+    });
+    let handle: KhaltiPaymentFormHandle | null = null;
+
+    await act(async () => {
+      renderForm((h) => {
+        handle = h;
+      });
+    });
+
+    await act(async () => {
+      await handle!.confirmPayment("https://shop.test/return");
+    });
+    expect(screen.getByText("Khalti is down")).toBeInTheDocument();
+
+    await act(async () => {
+      handle!.clearError();
+    });
+    expect(screen.queryByText("Khalti is down")).toBeNull();
+  });
+
   it("returns an error when the session has no payment_url", async () => {
     mockCreate.mockResolvedValue({
       success: true,

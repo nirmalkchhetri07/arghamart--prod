@@ -13,6 +13,8 @@ import { saveRedirectSession } from "@/lib/utils/redirect-payment-session";
 export interface EsewaPaymentFormHandle {
   confirmPayment: (returnUrl: string) => Promise<{ error?: string }>;
   fetchUpdates: () => Promise<void>;
+  /** Clears a previously shown error immediately (e.g. on Pay retry). */
+  clearError: () => void;
 }
 
 interface EsewaPaymentFormProps {
@@ -53,10 +55,15 @@ export function EsewaPaymentForm({
 
   // The session is created at submit time — after shipping is confirmed —
   // so the signed amount matches the final order total.
+  // The auth lookup runs concurrently: it only reads cookies and is
+  // independent of session creation, so awaiting it separately would add a
+  // full round trip (very visible on slow mobile networks).
   const confirmPayment = useCallback(
     async (returnUrl: string): Promise<{ error?: string }> => {
       setError(null);
       setRedirecting(true);
+
+      const authPromise = getRedirectCartAuth(cartId).catch(() => undefined);
 
       try {
         const result = await createCheckoutPaymentSession(
@@ -95,13 +102,8 @@ export function EsewaPaymentForm({
         // `?session=` back, so the confirm page reads it from storage.
         // Also persist the guest order token: httpOnly cookies may be gone
         // on return, and the confirm call needs it to verify server-to-server.
-        let cartToken: string | undefined;
-        try {
-          const auth = await getRedirectCartAuth(cartId);
-          cartToken = auth.cartToken;
-        } catch {
-          // Best-effort — the cookie path still works when storage fails.
-        }
+        // Best-effort — the cookie path still works when the lookup fails.
+        const cartToken = (await authPromise)?.cartToken;
         saveRedirectSession(cartId, {
           sessionId: result.session.id,
           gateway: "esewa",
@@ -123,6 +125,10 @@ export function EsewaPaymentForm({
 
   const fetchUpdates = useCallback(async () => {}, []);
 
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   // Stable refs so the registered handle never goes stale.
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -130,11 +136,14 @@ export function EsewaPaymentForm({
   confirmPaymentRef.current = confirmPayment;
   const fetchUpdatesRef = useRef(fetchUpdates);
   fetchUpdatesRef.current = fetchUpdates;
+  const clearErrorRef = useRef(clearError);
+  clearErrorRef.current = clearError;
 
   useEffect(() => {
     onReadyRef.current({
       confirmPayment: (...args) => confirmPaymentRef.current(...args),
       fetchUpdates: (...args) => fetchUpdatesRef.current(...args),
+      clearError: () => clearErrorRef.current(),
     });
   }, []);
 

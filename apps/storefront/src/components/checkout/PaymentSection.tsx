@@ -70,6 +70,12 @@ export type PaymentCompleteResult =
 
 export interface PaymentSectionHandle {
   submit: () => Promise<{ error?: string }>;
+  /**
+   * Clears stale gateway errors immediately — call on Pay tap, before the
+   * cart refresh + address save round trips, so a previous failure doesn't
+   * linger on screen while the retry runs (very visible on slow networks).
+   */
+  clearErrors: () => void;
 }
 
 interface PaymentSectionProps {
@@ -525,6 +531,17 @@ export function PaymentSection({
   useImperativeHandle(
     ref,
     () => ({
+      clearErrors: () => {
+        setGatewayError(null);
+        // The mounted gateway form keeps its own error state — clear it too.
+        // Only the redirect forms expose clearError today; other handles
+        // simply don't have it.
+        (
+          gatewayHandleRef.current as unknown as {
+            clearError?: () => void;
+          } | null
+        )?.clearError?.();
+      },
       submit: async () => {
         if (completionInFlightRef.current) return {};
         completionInFlightRef.current = true;

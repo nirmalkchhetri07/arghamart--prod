@@ -199,6 +199,30 @@ describe("EsewaPaymentForm", () => {
     ).toBeNull();
   });
 
+  it("clears a shown error via clearError", async () => {
+    mockCreate.mockResolvedValue({
+      success: false,
+      error: "Gateway unavailable",
+    });
+    let handle: EsewaPaymentFormHandle | null = null;
+
+    await act(async () => {
+      renderForm((h) => {
+        handle = h;
+      });
+    });
+
+    await act(async () => {
+      await handle!.confirmPayment("https://shop.test/return");
+    });
+    expect(screen.getByText("Gateway unavailable")).toBeInTheDocument();
+
+    await act(async () => {
+      handle!.clearError();
+    });
+    expect(screen.queryByText("Gateway unavailable")).toBeNull();
+  });
+
   it("returns an error when the session has no form data", async () => {
     mockCreate.mockResolvedValue({
       success: true,

@@ -539,6 +539,9 @@ function CheckoutPageContentInner({
 
     setSectionErrors({});
     setError(null);
+    // Clear stale gateway errors instantly so a previous failure doesn't
+    // linger on screen during the refresh + submit round trips below.
+    paymentRef.current?.clearErrors();
 
     if (!isAuthenticated && !policyConsent) {
       setPolicyError(true);

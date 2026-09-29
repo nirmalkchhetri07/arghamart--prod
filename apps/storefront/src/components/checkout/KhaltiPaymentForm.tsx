@@ -13,6 +13,8 @@ import { saveRedirectSession } from "@/lib/utils/redirect-payment-session";
 export interface KhaltiPaymentFormHandle {
   confirmPayment: (returnUrl: string) => Promise<{ error?: string }>;
   fetchUpdates: () => Promise<void>;
+  /** Clears a previously shown error immediately (e.g. on Pay retry). */
+  clearError: () => void;
 }
 
 interface KhaltiPaymentFormProps {
@@ -32,10 +34,15 @@ export function KhaltiPaymentForm({
 
   // The session is created at submit time — after shipping is confirmed —
   // so the initiated amount matches the final order total.
+  // The auth lookup runs concurrently: it only reads cookies and is
+  // independent of session creation, so awaiting it separately would add a
+  // full round trip (very visible on slow mobile networks).
   const confirmPayment = useCallback(
     async (returnUrl: string): Promise<{ error?: string }> => {
       setError(null);
       setRedirecting(true);
+
+      const authPromise = getRedirectCartAuth(cartId).catch(() => undefined);
 
       try {
         const result = await createCheckoutPaymentSession(
@@ -71,13 +78,8 @@ export function KhaltiPaymentForm({
         // Persist the session id before leaving — the gateway can't echo
         // `?session=` back, so the confirm page reads it from storage.
         // Also persist the guest order token for the cookie-loss fallback.
-        let cartToken: string | undefined;
-        try {
-          const auth = await getRedirectCartAuth(cartId);
-          cartToken = auth.cartToken;
-        } catch {
-          // Best-effort — the cookie path still works when storage fails.
-        }
+        // Best-effort — the cookie path still works when the lookup fails.
+        const cartToken = (await authPromise)?.cartToken;
         saveRedirectSession(cartId, {
           sessionId: result.session.id,
           gateway: "khalti",
@@ -99,6 +101,10 @@ export function KhaltiPaymentForm({
 
   const fetchUpdates = useCallback(async () => {}, []);
 
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   // Stable refs so the registered handle never goes stale.
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -106,11 +112,14 @@ export function KhaltiPaymentForm({
   confirmPaymentRef.current = confirmPayment;
   const fetchUpdatesRef = useRef(fetchUpdates);
   fetchUpdatesRef.current = fetchUpdates;
+  const clearErrorRef = useRef(clearError);
+  clearErrorRef.current = clearError;
 
   useEffect(() => {
     onReadyRef.current({
       confirmPayment: (...args) => confirmPaymentRef.current(...args),
       fetchUpdates: (...args) => fetchUpdatesRef.current(...args),
+      clearError: () => clearErrorRef.current(),
     });
   }, []);
 
