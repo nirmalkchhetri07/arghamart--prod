@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@spree/cli':
-        specifier: ^2.4.4
-        version: 2.4.9
+        specifier: ^3.1.0
+        version: 3.1.0
       '@spree/docs':
         specifier: latest
-        version: 0.1.236
+        version: 0.1.269
 
 packages:
 
@@ -32,13 +32,13 @@ packages:
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
 
-  '@spree/cli@2.4.9':
-    resolution: {integrity: sha512-dJa53we4zAqIMCOQYlOK2M6rpDcV55O/xDzLUQ8SKoYNuOhnmP/mv6101QSFcCg2vciG/v+9prinMuZCVpMqiw==}
+  '@spree/cli@3.1.0':
+    resolution: {integrity: sha512-K0ZJeXgR+4F4TS2rMsh14oDsXIgR+CGR0BCsJPTUfyGM1oZbKwnv2ajQWMLEtzzJGe9qJNusnHowCqrdWTEGQg==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@spree/docs@0.1.236':
-    resolution: {integrity: sha512-8w3MIUHpXyp6KOmGhLVvx9UVIZOfxdIioZdpQfKU0yp3VO7grIxKdKfpRkAKI7eyF2wpz1c514Ak1tFyn5DS4A==}
+  '@spree/docs@0.1.269':
+    resolution: {integrity: sha512-VJM60NJoEFb+txn7KMLQuemRb04HtuHfmnqGoSGd3ctgnjQ4G7WmuT5SO/vaCbYnTanXBcB2HcLbJCv4iY/T+g==}
     engines: {node: '>=18.0.0'}
 
   commander@14.0.3:
@@ -168,7 +168,7 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
-  '@spree/cli@2.4.9':
+  '@spree/cli@3.1.0':
     dependencies:
       '@clack/prompts': 1.8.1
       commander: 14.0.3
@@ -176,7 +176,7 @@ snapshots:
       execa: 9.6.1
       picocolors: 1.1.1
 
-  '@spree/docs@0.1.236': {}
+  '@spree/docs@0.1.269': {}
 
   commander@14.0.3: {}
 
