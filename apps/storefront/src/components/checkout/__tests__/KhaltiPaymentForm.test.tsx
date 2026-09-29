@@ -14,16 +14,21 @@ vi.mock("next-intl", async () => {
 
 vi.mock("@/lib/data/payment", () => ({
   createCheckoutPaymentSession: vi.fn(),
+  getRedirectCartAuth: vi.fn(),
 }));
 
 import type { PaymentSession } from "@spree/sdk";
-import { createCheckoutPaymentSession } from "@/lib/data/payment";
+import {
+  createCheckoutPaymentSession,
+  getRedirectCartAuth,
+} from "@/lib/data/payment";
 import {
   KhaltiPaymentForm,
   type KhaltiPaymentFormHandle,
 } from "../KhaltiPaymentForm";
 
 const mockCreate = vi.mocked(createCheckoutPaymentSession);
+const mockAuth = vi.mocked(getRedirectCartAuth);
 
 const khaltiSession = {
   id: "session-khalti",
@@ -52,6 +57,11 @@ describe("KhaltiPaymentForm", () => {
     vi.clearAllMocks();
     window.sessionStorage.clear();
     window.localStorage.clear();
+    mockAuth.mockResolvedValue({
+      cartToken: "order-token-xyz",
+      cartId: "cart-1",
+      surface: "dtc" as const,
+    });
     href = "";
     Object.defineProperty(window, "location", {
       value: {
@@ -111,7 +121,11 @@ describe("KhaltiPaymentForm", () => {
 
     // Session id persisted for the confirm-payment return
     expect(window.sessionStorage.getItem("spree.redirect_session.cart-1")).toBe(
-      JSON.stringify({ sessionId: "session-khalti", gateway: "khalti" }),
+      JSON.stringify({
+        sessionId: "session-khalti",
+        gateway: "khalti",
+        cartToken: "order-token-xyz",
+      }),
     );
 
     // Redirecting state shown

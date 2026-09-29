@@ -14,16 +14,21 @@ vi.mock("next-intl", async () => {
 
 vi.mock("@/lib/data/payment", () => ({
   createCheckoutPaymentSession: vi.fn(),
+  getRedirectCartAuth: vi.fn(),
 }));
 
 import type { PaymentSession } from "@spree/sdk";
-import { createCheckoutPaymentSession } from "@/lib/data/payment";
+import {
+  createCheckoutPaymentSession,
+  getRedirectCartAuth,
+} from "@/lib/data/payment";
 import {
   EsewaPaymentForm,
   type EsewaPaymentFormHandle,
 } from "../EsewaPaymentForm";
 
 const mockCreate = vi.mocked(createCheckoutPaymentSession);
+const mockAuth = vi.mocked(getRedirectCartAuth);
 
 const esewaSession = {
   id: "session-esewa",
@@ -64,6 +69,11 @@ describe("EsewaPaymentForm", () => {
     window.sessionStorage.clear();
     window.localStorage.clear();
     document.body.innerHTML = "";
+    mockAuth.mockResolvedValue({
+      cartToken: "order-token-xyz",
+      cartId: "cart-1",
+      surface: "dtc" as const,
+    });
     submitSpy = vi
       .spyOn(HTMLFormElement.prototype, "submit")
       .mockImplementation(() => {});
@@ -129,11 +139,39 @@ describe("EsewaPaymentForm", () => {
 
     // Session id persisted for the confirm-payment return
     expect(window.sessionStorage.getItem("spree.redirect_session.cart-1")).toBe(
-      JSON.stringify({ sessionId: "session-esewa", gateway: "esewa" }),
+      JSON.stringify({
+        sessionId: "session-esewa",
+        gateway: "esewa",
+        cartToken: "order-token-xyz",
+      }),
     );
 
     // Redirecting state shown
     expect(screen.getByText("redirectingToGateway:eSewa")).toBeInTheDocument();
+  });
+
+  it("persists without cart token when auth lookup fails", async () => {
+    mockCreate.mockResolvedValue({ success: true, session: esewaSession });
+    mockAuth.mockRejectedValue(new Error("no cookies"));
+    let handle: EsewaPaymentFormHandle | null = null;
+
+    await act(async () => {
+      renderForm((h) => {
+        handle = h;
+      });
+    });
+
+    let outcome: { error?: string } | undefined;
+    await act(async () => {
+      outcome = await handle!.confirmPayment(
+        "https://shop.test/us/en/confirm-payment/cart-1",
+      );
+    });
+
+    expect(outcome).toEqual({});
+    expect(window.sessionStorage.getItem("spree.redirect_session.cart-1")).toBe(
+      JSON.stringify({ sessionId: "session-esewa", gateway: "esewa" }),
+    );
   });
 
   it("returns a user-facing error when session creation fails", async () => {

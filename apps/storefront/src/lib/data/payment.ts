@@ -4,7 +4,10 @@ import type { Order } from "@spree/sdk";
 import { updateTag } from "next/cache";
 import {
   cacheTagSuffix,
+  getAccessToken,
+  getCartId,
   getCartOptions,
+  getCartToken,
   getClientForSurface,
   requireCartId,
   type Surface,
@@ -121,10 +124,11 @@ export async function completeCheckoutPaymentSession(
 export async function completeCheckoutOrder(
   cartId: string,
   knownSurface?: Surface,
+  fallbackSpreeToken?: string,
 ) {
   const surface = knownSurface ?? (await resolveSurfaceForCart(cartId));
   try {
-    const options = await getCartOptions(surface);
+    const options = await optionsWithTokenFallback(surface, fallbackSpreeToken);
     const order: Order = await getClientForSurface(surface).carts.complete(
       cartId,
       options,
@@ -138,9 +142,11 @@ export async function completeCheckoutOrder(
       if (status === 403 || status === 422) {
         // Order already completed — try to fetch it so the thank-you page
         // can cache and display it without a second round-trip.
-        const completedOrder = await getOrder(cartId, undefined, surface).catch(
-          () => null,
-        );
+        const completedOrder = await getOrderWithTokenFallback(
+          cartId,
+          surface,
+          fallbackSpreeToken,
+        ).catch(() => null);
         updateTag(checkoutTag(surface));
         updateTag(cartTag(surface));
         return { success: true as const, order: completedOrder };
@@ -155,6 +161,80 @@ export async function completeCheckoutOrder(
 }
 
 /**
+ * Guest order token captured before an offsite redirect (eSewa/Khalti), so
+ * the confirm page can verify server-to-server even when the httpOnly cart
+ * cookies are unavailable on return. Call this just before navigating away —
+ * cookies are still intact at that point.
+ */
+export async function getRedirectCartAuth(cartId: string): Promise<{
+  cartToken?: string;
+  cartId?: string;
+  surface: Surface;
+}> {
+  const surface = await resolveSurfaceForCart(cartId);
+  const [cartToken, id] = await Promise.all([
+    getCartToken(surface),
+    getCartId(surface),
+  ]);
+  return { cartToken, cartId: id, surface };
+}
+
+/**
+ * SDK auth options for a surface, falling back to the redirect-stored guest
+ * token when the cart cookies are gone (offsite return in private mode,
+ * evicted cookies, etc.). Authenticated (JWT) users don't need the fallback.
+ */
+async function optionsWithTokenFallback(
+  surface: Surface,
+  fallbackSpreeToken?: string,
+): Promise<{ spreeToken: string | undefined; token: string | undefined }> {
+  const [options, accessToken] = await Promise.all([
+    getCartOptions(surface),
+    getAccessToken(),
+  ]);
+  return {
+    spreeToken: options.spreeToken ?? fallbackSpreeToken,
+    token: options.token ?? accessToken,
+  };
+}
+
+async function getOrderWithTokenFallback(
+  cartId: string,
+  surface: Surface,
+  fallbackSpreeToken?: string,
+) {
+  if (!fallbackSpreeToken) return getOrder(cartId, undefined, surface);
+  const cookieOptions = await getCartOptions(surface).catch(() => null);
+  if (cookieOptions?.spreeToken) return getOrder(cartId, undefined, surface);
+  const token = await getAccessToken().catch(() => undefined);
+  return getClientForSurface(surface).orders.get(
+    cartId,
+    undefined,
+    { spreeToken: fallbackSpreeToken, token },
+  );
+}
+
+async function getCartWithTokenFallback(
+  cartId: string,
+  surface: Surface,
+  fallbackSpreeToken?: string,
+) {
+  const cart = await getCart(cartId, surface);
+  if (cart || !fallbackSpreeToken) return cart;
+  // Cookies lost — retry with the redirect-stored guest token on both
+  // surfaces; whichever credentials match wins.
+  try {
+    const token = await getAccessToken().catch(() => undefined);
+    return await getClientForSurface(surface).carts.get(cartId, {
+      spreeToken: fallbackSpreeToken,
+      token,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Confirms payment and completes the order after returning from an offsite
  * payment gateway (e.g. CashApp, 3D Secure).
  *
@@ -162,6 +242,10 @@ export async function completeCheckoutOrder(
  * `externalData` — e.g. `{ data }` (eSewa's base64 redirect payload) or
  * `{ pidx }` (Khalti). The backend verifies server-to-server and never
  * trusts the client payload for the verdict.
+ *
+ * `fallbackSpreeToken` is the guest order token captured before the offsite
+ * redirect (see `getRedirectCartAuth` + `saveRedirectSession`). It is only
+ * used when the httpOnly cart cookies are unavailable on return.
  */
 export async function confirmPaymentAndCompleteCart(
   cartId: string,
@@ -170,32 +254,45 @@ export async function confirmPaymentAndCompleteCart(
   redirectResult?: string,
   adyenSessionId?: string,
   externalData?: Record<string, unknown>,
+  fallbackSpreeToken?: string,
 ): Promise<
   { success: true; order: unknown } | { success: false; error: string }
 > {
   // Cookies may have been cleared during the offsite redirect, so verify the
   // surface against the cart's own channel rather than trusting the cookie.
   const verifiedSurface = await resolveSurfaceForCartVerified(cartId);
+  let surface: Surface;
   if (verifiedSurface === "unverified") {
-    // The wholesale check couldn't run to completion (transient fetch/channel
-    // failure). Fail closed rather than defaulting to DTC: completing a
-    // possibly-wholesale checkout through the DTC client, or reporting success
-    // for a cart we couldn't fetch, would be worse than asking the caller to
-    // retry once the backend recovers.
-    return {
-      success: false,
-      error: "Couldn't confirm your order yet. Please try again in a moment.",
-    };
+    // No cart could be fetched for verification (cookies lost, cart already
+    // completed, or transient backend failure). Fall back to the cookie
+    // surface so a transient doesn't hard-block checkout — the explicit
+    // cartId + fallback token below still scope every request to this cart,
+    // and the backend verifies payment server-to-server.
+    // If the cart truly can't be fetched, the getCart branch below resolves
+    // it as an already-completed order instead of surfacing a retry loop.
+    surface = await resolveSurfaceForCart(cartId);
+  } else {
+    surface = verifiedSurface;
   }
-  const surface = verifiedSurface;
   try {
-    const cart = await getCart(cartId, surface);
+    const cart = await getCartWithTokenFallback(
+      cartId,
+      surface,
+      fallbackSpreeToken,
+    );
     if (!cart) {
-      // Cart not found — the order may already be completed (e.g. by webhook).
-      // Try fetching it as a completed order before giving up.
-      const completedOrder = await getOrder(cartId, undefined, surface).catch(
-        () => null,
-      );
+      // Cart not found — the order may already be completed (e.g. by webhook
+      // or a double-submit). Try fetching it as a completed order on this
+      // surface, then on the other surface, before giving up.
+      const completedOrder =
+        (await getOrderWithTokenFallback(cartId, surface, fallbackSpreeToken).catch(
+          () => null,
+        )) ??
+        (await getOrderWithTokenFallback(
+          cartId,
+          surface === "dtc" ? "wholesale" : "dtc",
+          fallbackSpreeToken,
+        ).catch(() => null));
       return { success: true, order: completedOrder };
     }
 
@@ -204,8 +301,10 @@ export async function confirmPaymentAndCompleteCart(
     }
 
     if (sessionId) {
-      const options = await getCartOptions(surface);
-      const id = await requireCartId(surface);
+      const options = await optionsWithTokenFallback(
+        surface,
+        fallbackSpreeToken,
+      );
       const completeParams =
         sessionResult || externalData
           ? {
@@ -213,9 +312,16 @@ export async function confirmPaymentAndCompleteCart(
               ...(externalData ? { external_data: externalData } : {}),
             }
           : undefined;
+      // Use the explicit cartId from the return URL — the cookie cart id may
+      // be gone after the offsite redirect.
       const completeResult = await getClientForSurface(
         surface,
-      ).carts.paymentSessions.complete(id, sessionId, completeParams, options);
+      ).carts.paymentSessions.complete(
+        cartId,
+        sessionId,
+        completeParams,
+        options,
+      );
       if (completeResult.status === "failed") {
         return {
           success: false,
@@ -225,12 +331,14 @@ export async function confirmPaymentAndCompleteCart(
     } else if (redirectResult) {
       // Adyen redirect flow: redirectResult is appended by Adyen to the return URL.
       // Pass it to the backend which resolves the session and processes the redirect.
-      const options = await getCartOptions(surface);
-      const id = await requireCartId(surface);
+      const options = await optionsWithTokenFallback(
+        surface,
+        fallbackSpreeToken,
+      );
       const completeResult = await getClientForSurface(
         surface,
       ).carts.paymentSessions.complete(
-        id,
+        cartId,
         adyenSessionId ?? "",
         {
           external_data: {
@@ -245,11 +353,24 @@ export async function confirmPaymentAndCompleteCart(
           error: "Payment was not successful. Please try again.",
         };
       }
+    } else if (externalData && Object.keys(externalData).length > 0) {
+      // eSewa/Khalti returned without a resolvable session id (storage was
+      // cleared while offsite). We can't verify without the session, so fail
+      // with a resumable message instead of attempting an unpaid completion.
+      return {
+        success: false,
+        error:
+          "Payment session expired. Please return to checkout and try again.",
+      };
     }
 
     // Pass the verified surface so completion doesn't re-resolve from the
     // (possibly cleared) cookie.
-    const result = await completeCheckoutOrder(cartId, surface);
+    const result = await completeCheckoutOrder(
+      cartId,
+      surface,
+      fallbackSpreeToken,
+    );
     if (result.success) {
       return { success: true, order: result.order };
     }

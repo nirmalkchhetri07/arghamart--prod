@@ -66,4 +66,30 @@ describe("redirect-payment-session", () => {
 
     expect(readRedirectSession("cart-2")).toBeNull();
   });
+
+  it("round-trips the fallback cart token when present", () => {
+    saveRedirectSession("cart-1", {
+      sessionId: "session-1",
+      gateway: "esewa",
+      cartToken: "order-token-xyz",
+    });
+
+    expect(readRedirectSession("cart-1")).toEqual({
+      sessionId: "session-1",
+      gateway: "esewa",
+      cartToken: "order-token-xyz",
+    });
+  });
+
+  it("omits a missing cart token for backward compatibility", () => {
+    window.sessionStorage.setItem(
+      "spree.redirect_session.cart-1",
+      JSON.stringify({ sessionId: "session-1", gateway: "esewa" }),
+    );
+
+    expect(readRedirectSession("cart-1")).toEqual({
+      sessionId: "session-1",
+      gateway: "esewa",
+    });
+  });
 });

@@ -88,6 +88,7 @@ describe("ConfirmPaymentPage", () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       );
       expect(mockReplace).toHaveBeenCalledWith("/us/en/order-placed/cart-1");
     });
@@ -110,6 +111,7 @@ describe("ConfirmPaymentPage", () => {
         "cart-1",
         "session-1",
         "eyJhYmMiOiJ4eXoifQ==",
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -148,6 +150,7 @@ describe("ConfirmPaymentPage", () => {
     await waitFor(() => {
       expect(mockConfirm).toHaveBeenCalledWith(
         "cart-1",
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -233,6 +236,7 @@ describe("ConfirmPaymentPage", () => {
         undefined,
         undefined,
         { data: "ZXNld2EtcGF5bG9hZA==" },
+        undefined,
       );
       expect(mockReplace).toHaveBeenCalledWith("/us/en/order-placed/cart-1");
     });
@@ -261,6 +265,7 @@ describe("ConfirmPaymentPage", () => {
         undefined,
         undefined,
         { pidx: "bZQLD9wRVWo4CdESSfuSsB" },
+        undefined,
       );
     });
   });
@@ -286,5 +291,37 @@ describe("ConfirmPaymentPage", () => {
     expect(
       window.sessionStorage.getItem("spree.redirect_session.cart-1"),
     ).toBeNull();
+  });
+
+  it("forwards the stored cart token as fallback credential", async () => {
+    window.sessionStorage.setItem(
+      "spree.redirect_session.cart-1",
+      JSON.stringify({
+        sessionId: "session-esewa",
+        gateway: "esewa",
+        cartToken: "order-token-xyz",
+      }),
+    );
+    mockSearchParams.set("data", "ZXNld2EtcGF5bG9hZA==");
+    mockConfirm.mockResolvedValue({
+      success: true as const,
+      order: { id: "cart-1" },
+    });
+
+    await act(async () => {
+      renderPage();
+    });
+
+    await waitFor(() => {
+      expect(mockConfirm).toHaveBeenCalledWith(
+        "cart-1",
+        "session-esewa",
+        undefined,
+        undefined,
+        undefined,
+        { data: "ZXNld2EtcGF5bG9hZA==" },
+        "order-token-xyz",
+      );
+    });
   });
 });

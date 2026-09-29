@@ -95,22 +95,25 @@ describe("resolveSurfaceForCartVerified", () => {
     expect(surface).toBe("unverified");
   });
 
-  it("fails closed (unverified) when the channel can't be resolved", async () => {
+  it("falls back to dtc when the channel can't be resolved but a cart exists", async () => {
+    // Wholesale cookie already missed; a present cart with an unreachable
+    // channel must not block DTC redirect returns (eSewa/Khalti).
     mockGetCart.mockResolvedValue({ id: "cart-x", channel_id: "ws-chan" });
     mockGetWholesaleChannel.mockResolvedValue(null);
 
     const surface = await resolveSurfaceForCartVerified("cart-x");
 
-    expect(surface).toBe("unverified");
+    expect(surface).toBe("dtc");
   });
 
-  it("fails closed (unverified) when the cart has no channel_id", async () => {
+  it("falls back to dtc when the cart has no channel_id", async () => {
+    // Legacy cart without a channel + non-wholesale cookie => DTC.
     mockGetCart.mockResolvedValue({ id: "cart-x", channel_id: null });
     mockGetWholesaleChannel.mockResolvedValue({ id: "ws-chan" });
 
     const surface = await resolveSurfaceForCartVerified("cart-x");
 
-    expect(surface).toBe("unverified");
+    expect(surface).toBe("dtc");
   });
 
   it("confirms dtc from the DTC fetch when the wholesale fetch misses (guest offsite return)", async () => {

@@ -62,9 +62,11 @@ export default function ConfirmPaymentPage({
     const khaltiPidx = searchParams.get("pidx");
 
     // eSewa/Khalti can't echo the Spree session id — resolve it from the
-    // ref saved before the offsite redirect.
+    // ref saved before the offsite redirect. The ref also carries the guest
+    // order token as a fallback when httpOnly cookies are gone on return.
     const storedRef = sessionId ? null : readRedirectSession(cartId);
     const resolvedSessionId = sessionId ?? storedRef?.sessionId;
+    const fallbackSpreeToken = storedRef?.cartToken;
 
     const externalData: Record<string, unknown> = {
       ...(esewaData ? { data: esewaData } : {}),
@@ -79,6 +81,7 @@ export default function ConfirmPaymentPage({
         redirectResult ?? undefined,
         adyenSessionId ?? undefined,
         Object.keys(externalData).length > 0 ? externalData : undefined,
+        fallbackSpreeToken,
       );
 
       clearRedirectSession(cartId);

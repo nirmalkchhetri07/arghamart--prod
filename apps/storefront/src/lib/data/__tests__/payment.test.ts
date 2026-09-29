@@ -333,5 +333,61 @@ describe("payment server actions", () => {
       // so confirmPaymentAndCompleteCart treats it as already completed
       expect(result).toEqual({ success: true, order: null });
     });
+
+    it("returns session-expired error when redirect payload has no session id", async () => {
+      mockClient.carts.get.mockResolvedValue({
+        id: "cart-1",
+        current_step: "payment",
+      });
+
+      const result = await confirmPaymentAndCompleteCart(
+        "cart-1",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { data: "ZXNld2EtcGF5bG9hZA==" },
+      );
+
+      expect(result).toEqual({
+        success: false,
+        error:
+          "Payment session expired. Please return to checkout and try again.",
+      });
+      expect(mockClient.carts.paymentSessions.complete).not.toHaveBeenCalled();
+      expect(mockClient.carts.complete).not.toHaveBeenCalled();
+    });
+
+    it("uses the explicit cart id for session complete (cookie-independent)", async () => {
+      mockClient.carts.get.mockResolvedValue({
+        id: "cart-1",
+        current_step: "payment",
+      });
+      mockClient.carts.paymentSessions.complete.mockResolvedValue({
+        id: "session-1",
+        status: "completed",
+      });
+      mockClient.carts.complete.mockResolvedValue(mockOrder);
+
+      const result = await confirmPaymentAndCompleteCart(
+        "cart-1",
+        "session-1",
+        undefined,
+        undefined,
+        undefined,
+        { data: "ZXNld2EtcGF5bG9hZA==" },
+        "fallback-token-xyz",
+      );
+
+      expect(
+        mockClient.carts.paymentSessions.complete,
+      ).toHaveBeenCalledWith(
+        "cart-1",
+        "session-1",
+        { external_data: { data: "ZXNld2EtcGF5bG9hZA==" } },
+        { spreeToken: "order-token-123", token: undefined },
+      );
+      expect(result).toEqual({ success: true, order: mockOrder });
+    });
   });
 });

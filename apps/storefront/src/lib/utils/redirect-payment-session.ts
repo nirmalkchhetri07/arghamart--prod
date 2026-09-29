@@ -14,6 +14,13 @@
 export interface RedirectSessionRef {
   sessionId: string;
   gateway: "esewa" | "khalti";
+  /**
+   * Guest order token (X-Spree-Token) captured before leaving for the gateway.
+   * Cookies are httpOnly and may be unavailable when the gateway redirects
+   * back (private mode, cookie eviction, cross-site POST), so the confirm page
+   * forwards this as a fallback credential for server-to-server verification.
+   */
+  cartToken?: string;
 }
 
 function storageKey(cartId: string): string {
@@ -58,7 +65,13 @@ export function readRedirectSession(cartId: string): RedirectSessionRef | null {
     const parsed = JSON.parse(raw) as Partial<RedirectSessionRef>;
     if (typeof parsed.sessionId !== "string" || !parsed.sessionId) return null;
     if (parsed.gateway !== "esewa" && parsed.gateway !== "khalti") return null;
-    return { sessionId: parsed.sessionId, gateway: parsed.gateway };
+    return {
+      sessionId: parsed.sessionId,
+      gateway: parsed.gateway,
+      ...(typeof parsed.cartToken === "string" && parsed.cartToken
+        ? { cartToken: parsed.cartToken }
+        : {}),
+    };
   } catch {
     return null;
   }

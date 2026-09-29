@@ -52,8 +52,14 @@ export type VerifiedSurface = Surface | "unverified";
  * though the browser holds a valid token. Whichever fetch hits, the cart's own
  * `channel_id` decides — never the cookie.
  *
- * Returns `"unverified"` when the wholesale lookup fails so the caller can fail
- * closed — a transient failure must not be mistaken for a confirmed DTC cart.
+ * Returns `"unverified"` only when no cart could be fetched at all (cookies
+ * lost, cart completed, or transient failure). When a cart WAS fetched but the
+ * wholesale channel lookup failed or the cart carries no channel_id, we fall
+ * back to `"dtc"` — the wholesale cookie already missed above, and wholesale
+ * carts always carry a channel_id, so a present-but-unclassifiable cart with a
+ * non-wholesale cookie is a DTC cart. This keeps eSewa/Khalti DTC guests from
+ * being stuck on "Couldn't confirm your order yet" for legacy carts or a
+ * transient channel fetch.
  */
 export async function resolveSurfaceForCartVerified(
   cartId: string,
@@ -64,10 +70,9 @@ export async function resolveSurfaceForCartVerified(
   if (wholesaleCartId === cartId) return "wholesale";
 
   // Cookie says DTC or is absent — verify against the cart's channel. Only a
-  // *positive* signal decides the surface: a fetched cart whose channel matches
-  // wholesale → "wholesale"; a fetched cart whose channel differs → confirmed
-  // "dtc". Anything else (fetch threw, cart null, channel null) is "unverified"
-  // so the caller fails closed instead of defaulting to DTC.
+  // *positive* wholesale signal routes to wholesale; a fetched cart that is
+  // clearly not wholesale resolves to "dtc". "unverified" is reserved for the
+  // truly ambiguous case where no cart could be fetched.
   try {
     const [dtcCart, wholesaleCart, channel] = await Promise.all([
       getCart(cartId, "dtc"),
@@ -79,8 +84,21 @@ export async function resolveSurfaceForCartVerified(
     // token resolves via the DTC fetch, a wholesale JWT via either fetch with
     // the cart's own channel_id breaking the tie.
     const cart = dtcCart ?? wholesaleCart;
-    if (!cart || !channel) return "unverified";
-    if (cart.channel_id == null) return "unverified";
+    if (!cart) return "unverified";
+    if (!channel) {
+      // Wholesale channel unreachable but we hold the cart and the wholesale
+      // cookie missed — treat as DTC so redirect returns can proceed; the
+      // subsequent payment-session complete still verifies server-to-server.
+      console.warn(
+        "[checkout] wholesale channel unreachable during surface verify, falling back to dtc",
+      );
+      return "dtc";
+    }
+    if (cart.channel_id == null) {
+      // Legacy cart without a channel — wholesale cookie already missed, so
+      // this cannot be a wholesale checkout in progress.
+      return "dtc";
+    }
     return cart.channel_id === channel.id ? "wholesale" : "dtc";
   } catch {
     return "unverified";

@@ -4,7 +4,10 @@ import { CircleAlert, Loader2, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { createCheckoutPaymentSession } from "@/lib/data/payment";
+import {
+  createCheckoutPaymentSession,
+  getRedirectCartAuth,
+} from "@/lib/data/payment";
 import { saveRedirectSession } from "@/lib/utils/redirect-payment-session";
 
 export interface KhaltiPaymentFormHandle {
@@ -67,9 +70,18 @@ export function KhaltiPaymentForm({
 
         // Persist the session id before leaving — the gateway can't echo
         // `?session=` back, so the confirm page reads it from storage.
+        // Also persist the guest order token for the cookie-loss fallback.
+        let cartToken: string | undefined;
+        try {
+          const auth = await getRedirectCartAuth(cartId);
+          cartToken = auth.cartToken;
+        } catch {
+          // Best-effort — the cookie path still works when storage fails.
+        }
         saveRedirectSession(cartId, {
           sessionId: result.session.id,
           gateway: "khalti",
+          ...(cartToken ? { cartToken } : {}),
         });
 
         window.location.href = paymentUrl;
