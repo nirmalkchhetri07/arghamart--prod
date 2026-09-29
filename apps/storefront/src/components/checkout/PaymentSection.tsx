@@ -34,6 +34,10 @@ import {
   type KhaltiPaymentFormHandle,
 } from "@/components/checkout/KhaltiPaymentForm";
 import {
+  ManualQrPaymentForm,
+  type ManualQrPaymentFormHandle,
+} from "@/components/checkout/ManualQrPaymentForm";
+import {
   PayPalPaymentForm,
   type PayPalPaymentFormHandle,
 } from "@/components/checkout/PayPalPaymentForm";
@@ -187,6 +191,7 @@ export function PaymentSection({
     | PayPalPaymentFormHandle
     | EsewaPaymentFormHandle
     | KhaltiPaymentFormHandle
+    | ManualQrPaymentFormHandle
     | null
   >(null);
   const initRef = useRef(false);
@@ -200,7 +205,8 @@ export function PaymentSection({
         | AdyenPaymentFormHandle
         | PayPalPaymentFormHandle
         | EsewaPaymentFormHandle
-        | KhaltiPaymentFormHandle,
+        | KhaltiPaymentFormHandle
+        | ManualQrPaymentFormHandle,
     ) => {
       gatewayHandleRef.current = handle;
     },
@@ -1048,6 +1054,34 @@ export function PaymentSection({
                                   />
                                 </div>
                               );
+                            }
+                            case "manual_qr": {
+                              // Session-based like Stripe (pre-created on
+                              // select, completed inline at Pay time) — never
+                              // redirects offsite. The screenshot upload and
+                              // session completion happen inside
+                              // confirmPayment, so the generic session branch
+                              // of submit() drives the order completion.
+                              const qrUrl = ext?.qr_image_url as
+                                | string
+                                | undefined;
+                              const instructions = ext?.instructions as
+                                | string
+                                | undefined;
+                              return ext && paymentSessionId ? (
+                                <div className="p-4">
+                                  <ManualQrPaymentForm
+                                    key={paymentSessionId}
+                                    cartId={cart.id}
+                                    sessionId={paymentSessionId}
+                                    qrImageUrl={qrUrl}
+                                    instructions={instructions}
+                                    amountDue={cart.amount_due ?? cart.total}
+                                    currency={cart.currency}
+                                    onReady={handleGatewayReady}
+                                  />
+                                </div>
+                              ) : null;
                             }
                             default:
                               return (

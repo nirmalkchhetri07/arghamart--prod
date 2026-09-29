@@ -10,3 +10,25 @@ en:
     cannot_mark_as_delivered: "Shipment cannot be marked as delivered"
     shipment_states:
       delivered: "Delivered"
+    # Manual QR payments (see Spree::PaymentMethod::ManualQr).
+    admin:
+      manual_qr:
+        approved: "QR payment approved and completed."
+        cannot_approve: "Only a pending Manual QR payment can be approved."
+        rejected: "QR payment rejected."
+        cannot_reject: "Only a pending Manual QR payment can be rejected."
+    qr_proof: "Payment screenshot"
+    qr_transaction_id: "Customer transaction ID"
+    qr_status: "Verification"
+    qr_statuses:
+      pending: "Pending verification"
+      verified: "Verified"
+      rejected: "Rejected"
+    qr_rejection_reason: "Rejection reason"
+    qr_rejection_reason_help: "Shown to the customer on their order page."
+    no_qr_proof_uploaded: "No screenshot uploaded yet."
+    approve_qr_payment: "Approve"
+    reject_qr_payment: "Reject"
+    qr_code: "Payment QR code"
+    qr_code_help: "Scanned by the customer in their banking or wallet app. PNG, JPG or WebP, max 5 MB."
+    qr_instructions_help: "Shown at checkout under the QR code, e.g. account name and number."

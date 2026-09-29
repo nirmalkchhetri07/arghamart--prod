@@ -332,7 +332,15 @@
     "policyConsentRequired": "अर्डर पक्का गर्न नियम तथा शर्तहरूमा सहमति जनाउनु आवश्यक छ",
     "iAgreeToThe": "म नियम तथा",
     "policySeparatorComma": ", ",
-    "policySeparatorAnd": " र "
+    "policySeparatorAnd": " र ",
+    "manualQrTitle": "QR बाट भुक्तानी गर्नुहोस्",
+    "manualQrInfo": "आफ्नो बैंकिङ वा वालेट एपले कोड स्क्यान गर्नुहोस्, त्यसपछि तल भुक्तानीको स्क्रिनसट अपलोड गर्नुहोस्।",
+    "manualQrAmountDue": "तिर्नुपर्ने रकम: {amount} {currency}",
+    "manualQrUploadLabel": "भुक्तानीको स्क्रिनसट अपलोड गर्नुहोस्",
+    "manualQrTransactionPlaceholder": "कारोबार ID (वैकल्पिक)",
+    "manualQrNoFile": "कृपया पहिले आफ्नो भुक्तानीको स्क्रिनसट छान्नुहोस्।",
+    "manualQrInvalidFile": "कृपया 5 MB भन्दा सानो तस्बिर (PNG, JPG वा WebP) छान्नुहोस्।",
+    "manualQrNoQr": "QR कोड उपलब्ध छैन — कृपया सहयोगका लागि सम्पर्क गर्नुहोस्।"
   },
   "address": {
     "firstName": "पहिलो नाम",
@@ -465,7 +473,15 @@
     "orderTitle": "अर्डर नं #{number}",
     "shipmentCanceledRefund": "डेलिभरी रद्द भयो - फिर्ता रकम पठाइएको छ।",
     "shippingMethodUnavailable": "उपलब्ध छैन",
-    "totalColumn": "कुल जम्मा"
+    "totalColumn": "कुल जम्मा",
+    "manualQrProof": "भुक्तानीको स्क्रिनसट",
+    "manualQrStatusPending": "प्रमाणीकरण हुँदैछ",
+    "manualQrStatusVerified": "प्रमाणित",
+    "manualQrStatusRejected": "अस्वीकृत",
+    "manualQrTransactionId": "कारोबार ID",
+    "manualQrRejectionReason": "कारण",
+    "manualQrReupload": "नयाँ स्क्रिनसट अपलोड गर्नुहोस्",
+    "manualQrReuploadSubmit": "नयाँ स्क्रिनसट पेस गर्नुहोस्"
   },
   "orderPlaced": {
     "thanksForOrder": "{name} जी, तपाईंको अर्डरको लागि धन्यवाद!",

@@ -274,7 +274,15 @@
     "policyConsentRequired": "Debes aceptar las politicas de la tienda antes de realizar tu pedido",
     "iAgreeToThe": "Acepto las",
     "policySeparatorComma": ", ",
-    "policySeparatorAnd": " y "
+    "policySeparatorAnd": " y ",
+    "manualQrTitle": "Pagar con QR",
+    "manualQrInfo": "Escanee el código con su aplicación bancaria o billetera y suba el comprobante de pago a continuación.",
+    "manualQrAmountDue": "Monto a pagar: {amount} {currency}",
+    "manualQrUploadLabel": "Subir comprobante de pago",
+    "manualQrTransactionPlaceholder": "ID de transacción (opcional)",
+    "manualQrNoFile": "Seleccione primero su comprobante de pago.",
+    "manualQrInvalidFile": "Elija una imagen (PNG, JPG o WebP) de menos de 5 MB.",
+    "manualQrNoQr": "Código QR no disponible; contacte con soporte."
   },
   "address": {
     "firstName": "Nombre",
@@ -407,7 +415,15 @@
     "orderTitle": "Pedido #{number}",
     "shipmentCanceledRefund": "Envio cancelado — se ha emitido un reembolso.",
     "shippingMethodUnavailable": "No disponible",
-    "totalColumn": "Total"
+    "totalColumn": "Total",
+    "manualQrProof": "Comprobante de pago",
+    "manualQrStatusPending": "En verificación",
+    "manualQrStatusVerified": "Verificado",
+    "manualQrStatusRejected": "Rechazado",
+    "manualQrTransactionId": "ID de transacción",
+    "manualQrRejectionReason": "Motivo",
+    "manualQrReupload": "Subir nuevo comprobante",
+    "manualQrReuploadSubmit": "Enviar nuevo comprobante"
   },
   "orderPlaced": {
     "thanksForOrder": "¡Gracias por tu pedido, {name}!",

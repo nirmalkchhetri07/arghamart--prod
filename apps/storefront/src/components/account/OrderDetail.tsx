@@ -7,6 +7,7 @@ import { FulfillmentBlock } from "@/components/order/FulfillmentBlock";
 import { LineItemCard } from "@/components/order/LineItemCard";
 import { OrderTotals } from "@/components/order/OrderTotals";
 import { PaymentInfo } from "@/components/order/PaymentInfo";
+import { getConfig } from "@/lib/spree";
 import { formatDateTime } from "@/lib/utils/format";
 
 interface OrderDetailProps {
@@ -102,15 +103,35 @@ export async function OrderDetail({
                 {t("paymentInformation")}
               </h3>
               {order.payments
-                .filter((p) => p.status !== "void" && p.status !== "invalid")
-                .map((payment) => (
-                  <div key={payment.id} className="mb-3 last:mb-0">
-                    <PaymentInfo payment={payment} />
-                    <p className="text-sm text-gray-500 mt-1">
-                      {payment.display_amount}
-                    </p>
-                  </div>
-                ))}
+                .filter((p) => {
+                  if (p.status !== "void" && p.status !== "invalid")
+                    return true;
+                  // Rejected Manual QR payments are voided — keep them visible
+                  // so the customer sees the rejection and can re-upload.
+                  const qr = p as typeof p & { qr_status?: string | null };
+                  return qr.qr_status === "rejected";
+                })
+                .map((payment) => {
+                  const withProof = payment as typeof payment & {
+                    proof_url?: string | null;
+                  };
+                  const proofPath = withProof.proof_url;
+                  const proofImageUrl = proofPath
+                    ? `${getConfig().baseUrl.replace(/\/$/, "")}${proofPath}`
+                    : null;
+                  return (
+                    <div key={payment.id} className="mb-3 last:mb-0">
+                      <PaymentInfo
+                        payment={payment}
+                        proofImageUrl={proofImageUrl}
+                        orderId={order.id}
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        {payment.display_amount}
+                      </p>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>

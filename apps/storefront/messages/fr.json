@@ -274,7 +274,15 @@
     "policyConsentRequired": "Vous devez accepter les politiques du magasin avant de passer votre commande",
     "iAgreeToThe": "J'accepte les",
     "policySeparatorComma": ", ",
-    "policySeparatorAnd": " et "
+    "policySeparatorAnd": " et ",
+    "manualQrTitle": "Payer par QR",
+    "manualQrInfo": "Scannez le code avec votre application bancaire ou portefeuille, puis téléversez la capture du paiement ci-dessous.",
+    "manualQrAmountDue": "Montant à payer : {amount} {currency}",
+    "manualQrUploadLabel": "Téléverser la preuve de paiement",
+    "manualQrTransactionPlaceholder": "ID de transaction (facultatif)",
+    "manualQrNoFile": "Veuillez d'abord sélectionner votre capture de paiement.",
+    "manualQrInvalidFile": "Choisissez une image (PNG, JPG ou WebP) de moins de 5 Mo.",
+    "manualQrNoQr": "QR code indisponible — veuillez contacter le support."
   },
   "address": {
     "firstName": "Prenom",
@@ -407,7 +415,15 @@
     "orderTitle": "Commande #{number}",
     "shipmentCanceledRefund": "Expedition annulee — un remboursement a ete emis.",
     "shippingMethodUnavailable": "Indisponible",
-    "totalColumn": "Total"
+    "totalColumn": "Total",
+    "manualQrProof": "Preuve de paiement",
+    "manualQrStatusPending": "En vérification",
+    "manualQrStatusVerified": "Vérifié",
+    "manualQrStatusRejected": "Rejeté",
+    "manualQrTransactionId": "ID de transaction",
+    "manualQrRejectionReason": "Motif",
+    "manualQrReupload": "Téléverser une nouvelle preuve",
+    "manualQrReuploadSubmit": "Envoyer la nouvelle preuve"
   },
   "orderPlaced": {
     "thanksForOrder": "Merci pour votre commande, {name} !",

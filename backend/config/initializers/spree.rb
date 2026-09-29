@@ -33,9 +33,16 @@ Spree.dependencies do |dependencies|
   # dependencies.cart_add_item_service = 'MyNewAwesomeService'
 end
 
+# Manual QR screenshot uploads ride the Store API as multipart bodies up to
+# 5 MB — above Spree's 100 KB default API body cap, so raise it (with room
+# for multipart overhead). Larger bodies still get a 413 from
+# Spree::Api::Middleware::RequestSizeLimit.
+Spree::Api::Config[:max_request_body_size] = 6.megabytes
+
 Rails.application.config.after_initialize do
   Spree.payment_methods << Spree::PaymentMethod::Esewa
   Spree.payment_methods << Spree::PaymentMethod::Khalti
+  Spree.payment_methods << Spree::PaymentMethod::ManualQr
   # Spree.shipping_methods << Spree::ShippingMethods::SuperExpensiveNotVeryFastShipping
   # Spree.payment_methods << Spree::PaymentMethods::VerySafeAndReliablePaymentMethod
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1174,6 +1174,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_010000) do
     t.bigint "payment_method_id"
     t.jsonb "private_metadata"
     t.jsonb "public_metadata"
+    t.text "qr_rejection_reason"
+    t.string "qr_transaction_id"
     t.string "response_code"
     t.bigint "source_id"
     t.string "source_type"

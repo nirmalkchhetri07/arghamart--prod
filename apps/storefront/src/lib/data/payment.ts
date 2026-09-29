@@ -9,6 +9,7 @@ import {
   getCartOptions,
   getCartToken,
   getClientForSurface,
+  getConfig,
   requireCartId,
   type Surface,
 } from "@/lib/spree";
@@ -48,7 +49,18 @@ export async function createCheckoutPaymentSession(
       options,
     );
     updateTag(checkoutTag(surface));
-    return { session };
+    const external = { ...(session.external_data as Record<string, unknown>) };
+    // Manual QR returns a same-host Active Storage path, which the client
+    // component can't absolutize (SPREE_API_URL is server-only) — prefix it
+    // here so the checkout form can render the QR <img> directly.
+    if (
+      typeof external.qr_image_url === "string" &&
+      external.qr_image_url.startsWith("/")
+    ) {
+      const baseUrl = getConfig().baseUrl.replace(/\/$/, "");
+      external.qr_image_url = `${baseUrl}${external.qr_image_url}`;
+    }
+    return { session: { ...session, external_data: external } };
   }, "Failed to create payment session");
 }
 
@@ -177,6 +189,117 @@ export async function getRedirectCartAuth(cartId: string): Promise<{
     getCartId(surface),
   ]);
   return { cartToken, cartId: id, surface };
+}
+
+const MANUAL_QR_PROOF_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MANUAL_QR_PROOF_MAX_BYTES = 5 * 1024 * 1024;
+
+function manualQrProofError(file: File): string | null {
+  if (!MANUAL_QR_PROOF_TYPES.includes(file.type)) {
+    return "Screenshot must be a PNG, JPG or WebP image.";
+  }
+  if (file.size > MANUAL_QR_PROOF_MAX_BYTES) {
+    return "Screenshot must be under 5 MB.";
+  }
+  return null;
+}
+
+/** Raw Store API headers for endpoints the SDK has no method for (multipart). */
+async function manualQrApiHeaders(
+  surface: Surface,
+): Promise<{ baseUrl: string; headers: Record<string, string> }> {
+  const config = getConfig();
+  const { spreeToken, token } = await getCartOptions(surface);
+  const accessToken = token ?? (await getAccessToken().catch(() => undefined));
+  return {
+    baseUrl: config.baseUrl.replace(/\/$/, ""),
+    headers: {
+      "x-spree-api-key": config.publishableKey,
+      ...(spreeToken ? { "x-spree-token": spreeToken } : {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  };
+}
+
+/**
+ * Uploads the payment screenshot to a Manual QR session (checkout flow).
+ * Mirrors the backend validation so oversized/wrong-type files fail fast
+ * without a wasted upload.
+ */
+export async function uploadManualQrProof(
+  cartId: string,
+  sessionId: string,
+  file: File,
+) {
+  const localError = manualQrProofError(file);
+  if (localError) return { success: false as const, error: localError };
+
+  const surface = await resolveSurfaceForCart(cartId);
+  try {
+    const { baseUrl, headers } = await manualQrApiHeaders(surface);
+    const id = await requireCartId(surface);
+    const form = new FormData();
+    form.append("proof_image", file);
+    const response = await fetch(
+      `${baseUrl}/api/v3/store/carts/${id}/payment_sessions/${sessionId}/proof`,
+      { method: "POST", headers, body: form },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const message =
+        (body as { error?: { message?: string } } | null)?.error?.message ??
+        "Failed to upload screenshot.";
+      return { success: false as const, error: message };
+    }
+    updateTag(checkoutTag(surface));
+    return { success: true as const };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : "Failed to upload screenshot.",
+    };
+  }
+}
+
+/**
+ * Re-uploads a payment screenshot on a completed order after a rejection
+ * (customer account order page). Creates a fresh pending payment; the
+ * rejected one stays as history.
+ */
+export async function reuploadManualQrProof(
+  orderId: string,
+  file: File,
+  transactionId?: string,
+) {
+  const localError = manualQrProofError(file);
+  if (localError) return { success: false as const, error: localError };
+
+  // Orders resolve through the DTC surface on the account page; the JWT (or
+  // guest order token) authorizes as the order owner server-side.
+  const surface = await resolveSurfaceForCart(orderId).catch(() => "dtc" as const);
+  try {
+    const { baseUrl, headers } = await manualQrApiHeaders(surface);
+    const form = new FormData();
+    form.append("proof_image", file);
+    if (transactionId?.trim()) form.append("transaction_id", transactionId.trim());
+    const response = await fetch(
+      `${baseUrl}/api/v3/store/orders/${orderId}/manual_qr_proof`,
+      { method: "POST", headers, body: form },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const message =
+        (body as { error?: { message?: string } } | null)?.error?.message ??
+        "Failed to upload screenshot.";
+      return { success: false as const, error: message };
+    }
+    return { success: true as const };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : "Failed to upload screenshot.",
+    };
+  }
 }
 
 /**

@@ -274,7 +274,15 @@
     "policyConsentRequired": "Musisz zaakceptować regulamin sklepu przed złożeniem zamówienia",
     "iAgreeToThe": "Zgadzam się z",
     "policySeparatorComma": ", ",
-    "policySeparatorAnd": " i "
+    "policySeparatorAnd": " i ",
+    "manualQrTitle": "Zapłać kodem QR",
+    "manualQrInfo": "Zeskanuj kod aplikacją bankową lub portfelem, a następnie wgraj zrzut ekranu płatności poniżej.",
+    "manualQrAmountDue": "Kwota do zapłaty: {amount} {currency}",
+    "manualQrUploadLabel": "Wgraj zrzut ekranu płatności",
+    "manualQrTransactionPlaceholder": "ID transakcji (opcjonalnie)",
+    "manualQrNoFile": "Najpierw wybierz zrzut ekranu płatności.",
+    "manualQrInvalidFile": "Wybierz obraz (PNG, JPG lub WebP) poniżej 5 MB.",
+    "manualQrNoQr": "Kod QR niedostępny — skontaktuj się z obsługą."
   },
   "address": {
     "firstName": "Imię",
@@ -407,7 +415,15 @@
     "orderTitle": "Zamówienie #{number}",
     "shipmentCanceledRefund": "Przesyłka anulowana — zwrot został wystawiony.",
     "shippingMethodUnavailable": "Niedostępna",
-    "totalColumn": "Suma"
+    "totalColumn": "Suma",
+    "manualQrProof": "Zrzut ekranu płatności",
+    "manualQrStatusPending": "W weryfikacji",
+    "manualQrStatusVerified": "Zweryfikowano",
+    "manualQrStatusRejected": "Odrzucono",
+    "manualQrTransactionId": "ID transakcji",
+    "manualQrRejectionReason": "Powód",
+    "manualQrReupload": "Wgraj nowy zrzut ekranu",
+    "manualQrReuploadSubmit": "Prześlij nowy zrzut ekranu"
   },
   "orderPlaced": {
     "thanksForOrder": "Dziękujemy za zamówienie, {name}!",

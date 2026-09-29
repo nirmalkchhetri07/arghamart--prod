@@ -274,7 +274,15 @@
     "policyConsentRequired": "You must agree to the store policies before placing your order",
     "iAgreeToThe": "I agree to the",
     "policySeparatorComma": ", ",
-    "policySeparatorAnd": " and "
+    "policySeparatorAnd": " and ",
+    "manualQrTitle": "Pay with QR",
+    "manualQrInfo": "Scan the code with your banking or wallet app, then upload the payment screenshot below.",
+    "manualQrAmountDue": "Amount to pay: {amount} {currency}",
+    "manualQrUploadLabel": "Upload payment screenshot",
+    "manualQrTransactionPlaceholder": "Transaction ID (optional)",
+    "manualQrNoFile": "Please select your payment screenshot first.",
+    "manualQrInvalidFile": "Please choose an image (PNG, JPG or WebP) under 5 MB.",
+    "manualQrNoQr": "QR code unavailable — please contact support to complete your payment."
   },
   "address": {
     "firstName": "First name",
@@ -407,7 +415,15 @@
     "orderTitle": "Order #{number}",
     "shipmentCanceledRefund": "Shipment canceled — a refund has been issued.",
     "shippingMethodUnavailable": "Unavailable",
-    "totalColumn": "Total"
+    "totalColumn": "Total",
+    "manualQrProof": "Payment screenshot",
+    "manualQrStatusPending": "Pending verification",
+    "manualQrStatusVerified": "Verified",
+    "manualQrStatusRejected": "Rejected",
+    "manualQrTransactionId": "Transaction ID",
+    "manualQrRejectionReason": "Reason",
+    "manualQrReupload": "Upload new screenshot",
+    "manualQrReuploadSubmit": "Submit new screenshot"
   },
   "orderPlaced": {
     "thanksForOrder": "Thanks for your order, {name}!",

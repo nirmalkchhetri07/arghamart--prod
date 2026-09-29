@@ -31,6 +31,13 @@ describe("resolveGatewayId", () => {
     expect(resolveGatewayId("Spree::PaymentMethod::KhaltiTest")).toBe("khalti");
   });
 
+  it("resolves Manual QR type variants", () => {
+    expect(resolveGatewayId("manual_qr")).toBe("manual_qr");
+    expect(resolveGatewayId("Spree::PaymentMethod::ManualQr")).toBe(
+      "manual_qr",
+    );
+  });
+
   it("returns unknown for unrecognised gateways", () => {
     expect(resolveGatewayId("Spree::Gateway::Bogus")).toBe("unknown");
     expect(resolveGatewayId("check")).toBe("unknown");
@@ -38,9 +45,10 @@ describe("resolveGatewayId", () => {
 });
 
 describe("isRedirectGatewayId", () => {
-  it("is true for esewa and khalti only", () => {
+  it("is true for esewa and khalti only (manual_qr stays in-page)", () => {
     expect(isRedirectGatewayId("esewa")).toBe(true);
     expect(isRedirectGatewayId("khalti")).toBe(true);
+    expect(isRedirectGatewayId("manual_qr")).toBe(false);
     expect(isRedirectGatewayId("stripe")).toBe(false);
     expect(isRedirectGatewayId("adyen")).toBe(false);
     expect(isRedirectGatewayId("paypal")).toBe(false);

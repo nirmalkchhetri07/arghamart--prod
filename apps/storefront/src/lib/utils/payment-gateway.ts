@@ -16,6 +16,7 @@ export type GatewayId =
   | "razorpay"
   | "esewa"
   | "khalti"
+  | "manual_qr"
   | "unknown";
 
 /**
@@ -68,6 +69,12 @@ const GATEWAY_TYPE_MAP: Record<string, GatewayId> = {
   "Spree::PaymentMethod::Khalti": "khalti",
   "SpreeKhalti::Gateway": "khalti",
   "Spree::Gateway::KhaltiGateway": "khalti",
+  // Manual QR (Spree::PaymentMethod::ManualQr — in-page session: the QR is
+  // shown at checkout, the customer uploads a screenshot, an admin approves).
+  // Session-based like Stripe (pre-created on select, completed inline), but
+  // never redirects offsite — see isRedirectGatewayId below.
+  manual_qr: "manual_qr",
+  "Spree::PaymentMethod::ManualQr": "manual_qr",
 };
 
 /**
@@ -83,6 +90,8 @@ export function resolveGatewayId(paymentMethodType: string): GatewayId {
   const lowered = paymentMethodType.toLowerCase();
   if (lowered.includes("esewa")) return "esewa";
   if (lowered.includes("khalti")) return "khalti";
+  if (lowered.includes("manual_qr") || lowered.includes("manualqr"))
+    return "manual_qr";
   return "unknown";
 }
 

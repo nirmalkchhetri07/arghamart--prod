@@ -274,7 +274,15 @@
     "policyConsentRequired": "Sie müssen den Geschäftsrichtlinien zustimmen, bevor Sie Ihre Bestellung aufgeben",
     "iAgreeToThe": "Ich stimme zu",
     "policySeparatorComma": ", ",
-    "policySeparatorAnd": " und "
+    "policySeparatorAnd": " und ",
+    "manualQrTitle": "Per QR-Code zahlen",
+    "manualQrInfo": "Scannen Sie den Code mit Ihrer Banking- oder Wallet-App und laden Sie unten den Zahlungsbeleg hoch.",
+    "manualQrAmountDue": "Zu zahlender Betrag: {amount} {currency}",
+    "manualQrUploadLabel": "Zahlungsbeleg hochladen",
+    "manualQrTransactionPlaceholder": "Transaktions-ID (optional)",
+    "manualQrNoFile": "Bitte wählen Sie zuerst Ihren Zahlungsbeleg aus.",
+    "manualQrInvalidFile": "Bitte wählen Sie ein Bild (PNG, JPG oder WebP) unter 5 MB.",
+    "manualQrNoQr": "QR-Code nicht verfügbar – bitte kontaktieren Sie den Support."
   },
   "address": {
     "firstName": "Vorname",
@@ -407,7 +415,15 @@
     "orderTitle": "Bestellung #{number}",
     "shipmentCanceledRefund": "Sendung storniert — eine Rückerstattung wurde veranlasst.",
     "shippingMethodUnavailable": "Nicht verfügbar",
-    "totalColumn": "Gesamt"
+    "totalColumn": "Gesamt",
+    "manualQrProof": "Zahlungsbeleg",
+    "manualQrStatusPending": "Wird geprüft",
+    "manualQrStatusVerified": "Verifiziert",
+    "manualQrStatusRejected": "Abgelehnt",
+    "manualQrTransactionId": "Transaktions-ID",
+    "manualQrRejectionReason": "Grund",
+    "manualQrReupload": "Neuen Beleg hochladen",
+    "manualQrReuploadSubmit": "Neuen Beleg einreichen"
   },
   "orderPlaced": {
     "thanksForOrder": "Vielen Dank für Ihre Bestellung, {name}!",

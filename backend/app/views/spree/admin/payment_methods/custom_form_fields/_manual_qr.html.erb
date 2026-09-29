@@ -1,0 +1,15 @@
+<%# QR setup for Spree::PaymentMethod::ManualQr. Rendered automatically by the
+    payment-method form when the method responds to `custom_form_fields_partial_name`.
+    The instructions preference itself is rendered by `preference_fields` above it. %>
+<%= f.spree_file_field :qr_image,
+      label: Spree.t(:qr_code),
+      help: Spree.t(:qr_code_help) %>
+<% if f.object.qr_image.attached? %>
+  <div class="mt-2">
+    <%= image_tag main_app.rails_blob_path(f.object.qr_image, only_path: true),
+          class: 'max-w-[240px] rounded border' %>
+  </div>
+<% end %>
+<p class="text-sm text-gray-500 mt-2">
+  <%= Spree.t(:qr_instructions_help) %>
+</p>

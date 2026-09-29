@@ -16,11 +16,47 @@ Rails.application.routes.draw do
     # "Delivered" tracking action for shipments (see
     # Spree::Admin::ShipmentsControllerDecorator). Reopening the resource
     # only adds this member route — existing shipment routes are untouched.
+    #
+    # Manual QR review actions (see Spree::Admin::PaymentsControllerDecorator)
+    # and the storefront proof endpoints (see the ManualQrProofs controllers)
+    # follow the same pattern: only additive member routes, no gem routes
+    # are reopened or removed.
     namespace :admin, path: Spree.admin_path do
       resources :orders do
         resources :shipments, only: [] do
           member do
             post :mark_as_delivered
+          end
+        end
+        resources :payments, only: [] do
+          member do
+            put :approve
+            put :reject
+            get :proof
+          end
+        end
+      end
+    end
+
+    namespace :api do
+      namespace :v3 do
+        namespace :store do
+          resources :carts, only: [] do
+            resources :payment_sessions, only: [] do
+              member do
+                post :proof, to: 'carts/manual_qr_proofs#create'
+              end
+            end
+          end
+          resources :orders, only: [] do
+            member do
+              post :manual_qr_proof, to: 'manual_qr_proofs#reupload'
+            end
+            resources :payments, only: [] do
+              member do
+                get :proof, to: 'manual_qr_proofs#show'
+              end
+            end
           end
         end
       end
