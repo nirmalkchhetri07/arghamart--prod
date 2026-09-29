@@ -26,16 +26,26 @@ x-app: &app
     #   condition: service_healthy
     mailpit:
       condition: service_started
-  env_file: .env
+  # Two env files: backend/.env (the app's own file, also read natively by
+  # dotenv) first, root .env last so compose-level overrides win.
+  env_file:
+    - path: backend/.env
+      required: false
+    - path: .env
+      required: false
   environment:
     # database.yml builds dev/test configs from DATABASE_HOST/DATABASE_USERNAME
     # (port 5432 is its default). Deliberately NOT DATABASE_URL: a URL overrides
     # database.yml for every Rails env, so in-container rspec would hit the dev
     # DB and trip DatabaseCleaner's remote-URL safeguard. Both are pinned here
-    # so native-dev values in .env (env_file above) can't leak into the container.
+    # so native-dev values in backend/.env (env_file above) can't leak into the
+    # container.
     DATABASE_HOST: postgres
     DATABASE_USERNAME: postgres
-    SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+    # SECRET_KEY_BASE comes from env_file (backend/.env). It is deliberately not
+    # `${SECRET_KEY_BASE}` here: compose interpolates from the root .env/shell
+    # only, and an unset interpolation injects an empty string, which would
+    # override the real value from backend/.env.
     RAILS_FORCE_SSL: "false"
     RAILS_ASSUME_SSL: "false"
     # Dev runs more job threads than the production default of 3 — imports and

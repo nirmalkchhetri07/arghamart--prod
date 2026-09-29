@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.33.4",
   "scripts": {
+    "vercel-build": "next build",
     "dev": "spree dev",
     "stop": "spree stop",
     "down": "docker compose down",

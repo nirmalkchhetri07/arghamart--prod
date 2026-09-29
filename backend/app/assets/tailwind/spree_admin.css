@@ -55,4 +55,19 @@
   .badge-delivered {
     @apply border border-transparent bg-green-200 text-green-900;
   }
+
+  /* Fix mobile sidebar not opening (< lg: phones, iPad portrait).
+   * The gem hides the panel with `transform: translateX(-100%)` (see
+   * spree_admin's .../tailwind/spree/admin/components/_layout.css) but
+   * reveals it with `@apply translate-x-0`, which in Tailwind v4 sets the
+   * separate `translate` property — `translate` and `transform` compose,
+   * so the panel stayed off-canvas and only the backdrop faded in.
+   * Reset `transform` when open (both LTR and RTL). */
+  .sidebar-mobile.sidebar-mobile-open .sidebar-panel {
+    transform: translateX(0);
+  }
+
+  [dir="rtl"] .sidebar-mobile.sidebar-mobile-open .sidebar-panel {
+    transform: translateX(0);
+  }
 }

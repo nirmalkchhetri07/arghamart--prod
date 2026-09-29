@@ -13,6 +13,10 @@ development:
   username: <%= ENV.fetch("DATABASE_USERNAME") { 'postgres' } %>
   host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>
   port: <%= ENV.fetch("DATABASE_PORT") { 5432 }.to_i %>
+  # POSTGRES_PASSWORD, only used when the server asks for a password (the
+  # Docker dev Postgres runs with trust auth, so it is ignored there).
+  # inspect quotes it so ":" or "#" in the password stays valid YAML.
+  password: <%= ENV["POSTGRES_PASSWORD"].to_s.empty? ? nil : ENV["POSTGRES_PASSWORD"].inspect %>
 
 test:
   <<: *default
@@ -20,6 +24,8 @@ test:
   username: <%= ENV.fetch("DATABASE_USERNAME") { 'postgres' } %>
   host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>
   port: <%= ENV.fetch("DATABASE_PORT") { 5432 }.to_i %>
+  # See the development entry — same POSTGRES_PASSWORD behaviour.
+  password: <%= ENV["POSTGRES_PASSWORD"].to_s.empty? ? nil : ENV["POSTGRES_PASSWORD"].inspect %>
 
 production:
   <<: *default

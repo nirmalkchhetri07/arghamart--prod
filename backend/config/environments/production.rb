@@ -19,9 +19,16 @@ Rails.application.configure do
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
+  # Cloudflare R2 credentials count when given as CLOUDFLARE_* or R2_* (see .env).
+  cloudflare_configured = [
+    [ "CLOUDFLARE_ACCESS_KEY_ID", "R2_ACCESS_KEY_ID" ],
+    [ "CLOUDFLARE_SECRET_ACCESS_KEY", "R2_SECRET_ACCESS_KEY" ],
+    [ "CLOUDFLARE_ENDPOINT", "R2_ENDPOINT" ]
+  ].all? { |canonical, short| ENV[canonical].present? || ENV[short].present? }
+
   if ENV["AWS_ACCESS_KEY_ID"].present? && ENV["AWS_SECRET_ACCESS_KEY"].present?
     config.active_storage.service = :amazon
-  elsif ENV["CLOUDFLARE_ACCESS_KEY_ID"].present? && ENV["CLOUDFLARE_SECRET_ACCESS_KEY"].present? && ENV["CLOUDFLARE_ENDPOINT"].present?
+  elsif cloudflare_configured
     config.active_storage.service = :cloudflare
   else
     config.active_storage.service = :local

@@ -13,13 +13,16 @@ amazon:
   region: <%= ENV.fetch("AWS_REGION", "") %>
   bucket: <%= ENV.fetch("AWS_BUCKET", "spree-#{Rails.env}") %>
 
+# Cloudflare R2 (S3-compatible). Credentials are accepted under either name:
+# CLOUDFLARE_* (the Spree docs naming) or the shorter R2_* used in .env.
+# CLOUDFLARE_* wins when both are set.
 cloudflare:
   service: S3
-  endpoint: <%= ENV.fetch("CLOUDFLARE_ENDPOINT", "") %>
-  access_key_id: <%= ENV.fetch("CLOUDFLARE_ACCESS_KEY_ID", "") %>
-  secret_access_key: <%= ENV.fetch("CLOUDFLARE_SECRET_ACCESS_KEY", "") %>
+  endpoint: <%= ENV.fetch("CLOUDFLARE_ENDPOINT") { ENV.fetch("R2_ENDPOINT", "") } %>
+  access_key_id: <%= ENV.fetch("CLOUDFLARE_ACCESS_KEY_ID") { ENV.fetch("R2_ACCESS_KEY_ID", "") } %>
+  secret_access_key: <%= ENV.fetch("CLOUDFLARE_SECRET_ACCESS_KEY") { ENV.fetch("R2_SECRET_ACCESS_KEY", "") } %>
   region: auto
-  bucket: <%= ENV.fetch("CLOUDFLARE_BUCKET", "spree-#{Rails.env}") %>
+  bucket: <%= ENV.fetch("CLOUDFLARE_BUCKET") { ENV.fetch("R2_BUCKET", "spree-#{Rails.env}") } %>
   force_path_style: true
   request_checksum_calculation: "when_required"
   response_checksum_validation: "when_required"

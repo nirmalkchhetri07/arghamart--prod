@@ -4,3 +4,5 @@ node_modules/
 .DS_Store
 # Local Admin API credentials minted by `spree api` / `spree auth`
 .spree/
+.vercel
+.env*

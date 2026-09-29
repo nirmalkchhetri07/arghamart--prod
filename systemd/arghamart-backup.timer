@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily arghamart Postgres backup (20:15 UTC = 02:00 Nepal time)
+
+[Timer]
+# Daily at 20:15 UTC. Persistent=true runs the missed job on boot if the
+# server was down at 20:15.
+OnCalendar=*-*-* 20:15:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

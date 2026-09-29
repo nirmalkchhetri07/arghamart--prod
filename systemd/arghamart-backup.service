@@ -1,0 +1,13 @@
+[Unit]
+Description=arghamart production Postgres backup to R2
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# ADJUST to the repo path on the server if different:
+WorkingDirectory=/srv/arghamart
+ExecStart=/srv/arghamart/scripts/backup_db.sh
+# Keep service logs in the journal as well as /var/log/arghamart-backup.log
+StandardOutput=journal
+StandardError=journal
