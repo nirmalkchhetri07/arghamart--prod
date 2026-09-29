@@ -70,6 +70,7 @@ export const emailFixtures: EmailFixture[] = [
           state_text: "NY",
           postal_code: "10001",
           country_name: "United States",
+          phone: "+1 (555) 123-4567",
         },
         deliveryMethodName: "USPS Priority Mail (2-3 days)",
       }),

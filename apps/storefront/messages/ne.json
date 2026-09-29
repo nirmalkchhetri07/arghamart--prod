@@ -137,19 +137,19 @@
       "induction": {
         "eyebrow": "उत्कृष्ट सामानहरू",
         "title": "नयाँ मोडलका इन्डक्सन चुलोहरू",
-        "description": "",
+        "description": "छिटो र सुरक्षित खाना पकाउनका लागि ऊर्जा-बचत इन्डक्सन चुलोहरू।",
         "cta": "अहिले किन्नुहोस्"
       },
       "waterPurifiers": {
         "eyebrow": "नयाँ आगमन",
         "title": "आधुनिक वाटर प्युरिफायरहरू",
-        "description": "",
+        "description": "सफा र स्वस्थ पिउने पानीका लागि आधुनिक वाटर प्युरिफायरहरू।",
         "cta": "अहिले किन्नुहोस्"
       },
       "cctv": {
         "eyebrow": "नयाँ आगमन",
         "title": "आधुनिक CCTV क्यामेराहरू",
-        "description": "",
+        "description": "तपाईंको घर र पसलको सुरक्षाका लागि भरपर्दो CCTV क्यामेराहरू।",
         "cta": "अहिले किन्नुहोस्"
       }
     }
@@ -279,6 +279,12 @@
     "shipmentOf": "डेलिभरी {current} / {total}",
     "shipsFrom": "{location} बाट पठाइनेछ",
     "phone": "फोन: {phone}",
+    "phoneRequired": "डेलिभरी ठेगानाका लागि फोन नम्बर अनिवार्य छ।",
+    "esewaRedirectTitle": "eSewa बाट भुक्तानी गर्नुहोस्",
+    "esewaRedirectInfo": "आफ्नो भुक्तानी सुरक्षित रूपमा पूरा गर्न तपाईंलाई eSewa मा लगिनेछ।",
+    "khaltiRedirectTitle": "Khalti बाट भुक्तानी गर्नुहोस्",
+    "khaltiRedirectInfo": "आफ्नो भुक्तानी सुरक्षित रूपमा पूरा गर्न तपाईंलाई Khalti मा लगिनेछ।",
+    "redirectingToGateway": "तपाईंलाई {gateway} मा लैजाँदैछ...",
     "billingAddress": "बिलिङ ठेगाना",
     "sameAsShipping": "डेलिभरी ठेगाना जस्तै",
     "paymentMethod": "भुक्तानीको माध्यम",
