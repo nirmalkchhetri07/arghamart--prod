@@ -161,7 +161,7 @@ All items below are [Custom] and Enabled unless noted:
 11. **Nepali storefront localization + ArghaMart copy** — `apps/storefront/messages/ne.json`, `en.json` store description (“Fast delivery across Nepal…”).
 12. **Webhook email pipeline + dev preview** — `apps/storefront/src/lib/webhooks/handlers.ts`, `src/lib/emails/*`, `src/app/api/webhooks/spree/route.ts`, `src/app/dev/emails/*`.
 13. **Analytics/SEO/theme plumbing** — GTM GA4 mappers, Vercel Analytics/Speed Insights, hreflang/sitemap/robots/JSON-LD, Tailwind/shadcn theme.
-14. **Specs + tooling** — RSpec request/model coverage for all custom flows; `rust_esewa_payment/` Actix micro-crate (HMAC/sha2/base64) appears to be an experiment/scratch helper, not wired into Rails or the storefront (see §8).
+14. **Specs + tooling** — RSpec request/model coverage for all custom flows (including the eSewa HMAC signing + redirect-payload validation ported from the former `rust_esewa_payment/` crate into `Spree::PaymentMethod::Esewa`).
 15. **Infra blueprints** — `docker-compose.yml` / `docker-compose.dev.yml`, `backend/Dockerfile` (incl. dashboard stage), `render.yaml`, `apps/storefront/Dockerfile`, root `package.json` spree scripts.
 
 ## 6. Integrations & services
@@ -199,14 +199,13 @@ Storefront (`apps/storefront/.env.example`; `.env` / `.env.local` mirror it):
 
 1. **Live store data not audited.** Currency (NPR default?), locales, countries/zones, tax rates, shipping methods/rates, payment-method records + eSewa/Khalti/QR credentials, stock locations, and admin users live in Postgres, which was not queried. Verify in Admin (`/admin`) or via `pnpm spree api get stores|payment_methods|shipping_methods|tax_rates|stock_locations`.
 2. **Wholesale trade pricing is a demo constant.** `WHOLESALE_MIN_QUANTITY = 10` mirrors the sample-data VolumeRule and is not read per-variant from the API (`apps/storefront/src/lib/wholesale.ts`). Confirm against `spree/core/db/sample_data/wholesale.rb` / live price lists before treating as production pricing.
-3. **`rust_esewa_payment/` is unreferenced.** Actix-web + HMAC crate (`rust_esewa_payment/Cargo.toml`, `src/main.rs`) is not called from Rails or the storefront; likely an experiment. Confirm whether to keep or delete.
-4. **Meilisearch off by default.** Product search falls back to Postgres; typo-tolerant instant search needs the commented compose blocks + `MEILISEARCH_URL` + `bin/rails spree:search:reindex`.
-5. **S3/R2/CDN/SMTP/Resend/Sentry/GTM all credential-gated.** Code paths exist but do nothing live until their env vars + admin settings are provided (see §7). In particular: no backups, no log retention, and no reverse-proxy/SSL beyond `RAILS_FORCE_SSL`/`RAILS_ASSUME_SSL` + Thruster are configured in-repo.
-6. **Wishlist/reviews UIs not found in storefront.** Backend tables (`spree_wishlists`, `spree_wished_items`) exist but no `wishlist`/`review` components were found under `apps/storefront/src` (only email fixtures matched “review”). Either unbuilt or named differently — confirm.
-7. **Multi-currency beyond NPR unclear.** Manual QR hides itself on non-NPR orders; whether the store actually prices in NPR (markets + `supported_currencies`) could not be confirmed from code alone.
-8. **Phone-required checkout validation** (per git history `2377227`) was not re-verified field-by-field; spot-checked `AddressFormFields.tsx` still renders a phone input. Confirm required-ness in `PaymentSection`/address actions if it matters for eSewa/Khalti.
-9. **Wholesale disabled by default.** With `SPREE_WHOLESALE_CHANNEL` unset the `/wholesale/*` routes 404 and entry points hide — expected, but easy to misread as broken.
-10. **In-memory webhook idempotency.** `PROCESSED_EVENTS` Set caps at 10k and does not survive restarts or multi-instance deploys (`apps/storefront/src/lib/webhooks/handlers.ts`); fine for single-instance, lossy otherwise.
+3. **Meilisearch off by default.** Product search falls back to Postgres; typo-tolerant instant search needs the commented compose blocks + `MEILISEARCH_URL` + `bin/rails spree:search:reindex`.
+4. **S3/R2/CDN/SMTP/Resend/Sentry/GTM all credential-gated.** Code paths exist but do nothing live until their env vars + admin settings are provided (see §7). In particular: no backups, no log retention, and no reverse-proxy/SSL beyond `RAILS_FORCE_SSL`/`RAILS_ASSUME_SSL` + Thruster are configured in-repo.
+5. **Wishlist/reviews UIs not found in storefront.** Backend tables (`spree_wishlists`, `spree_wished_items`) exist but no `wishlist`/`review` components were found under `apps/storefront/src` (only email fixtures matched “review”). Either unbuilt or named differently — confirm.
+6. **Multi-currency beyond NPR unclear.** Manual QR hides itself on non-NPR orders; whether the store actually prices in NPR (markets + `supported_currencies`) could not be confirmed from code alone.
+7. **Phone-required checkout validation** (per git history `2377227`) was not re-verified field-by-field; spot-checked `AddressFormFields.tsx` still renders a phone input. Confirm required-ness in `PaymentSection`/address actions if it matters for eSewa/Khalti.
+8. **Wholesale disabled by default.** With `SPREE_WHOLESALE_CHANNEL` unset the `/wholesale/*` routes 404 and entry points hide — expected, but easy to misread as broken.
+9. **In-memory webhook idempotency.** `PROCESSED_EVENTS` Set caps at 10k and does not survive restarts or multi-instance deploys (`apps/storefront/src/lib/webhooks/handlers.ts`); fine for single-instance, lossy otherwise.
 
 ## 9. How to verify each major feature (short commands or URLs to check)
 

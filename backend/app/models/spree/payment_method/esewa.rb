@@ -72,6 +72,35 @@ module Spree
       Base64.strict_encode64(raw)
     end
 
+    # Validate the `?data=<base64 JSON>` payload eSewa redirects back with:
+    # Base64-decode it, parse the JSON, rebuild the `signed_field_names`
+    # message server-side and compare the HMAC-SHA256 signature. Returns
+    # false on any decode/parse/mismatch — never trust the redirect payload
+    # without this check. `secret_key` defaults to the gateway preference.
+    #
+    # Note this only grades the client-supplied payload; the verdict in
+    # #complete_payment_session still comes from the server-to-server
+    # status check, so a forged payload can neither complete nor fail a
+    # payment on its own.
+    def validate_esewa_response(data, secret_key = nil)
+      payload = decode_esewa_redirect_data(data)
+      return false unless payload.is_a?(Hash)
+
+      signed_names = payload['signed_field_names']
+      expected = payload['signature']
+      return false if signed_names.blank? || expected.blank?
+
+      message = signed_names.to_s.split(',').map do |field|
+        field = field.strip
+        "#{field}=#{esewa_signature_value(payload[field])}"
+      end.join(',')
+
+      actual = Base64.strict_encode64(
+        OpenSSL::HMAC.digest('sha256', (secret_key || preferred_secret_key).to_s, message)
+      )
+      ActiveSupport::SecurityUtils.secure_compare(actual, expected.to_s)
+    end
+
     # eSewa amounts are plain decimal strings ("100", "100.50").
     # Normalizes BigDecimal/Float/Integer to a canonical string so the
     # signature and the status-check query always agree.
@@ -181,15 +210,9 @@ module Spree
                       params.dig(:external_data, :data).presence ||
                       params.dig('external_data', 'data').presence
 
-      # Decode the redirect payload for diagnostics only — not for the verdict.
-      if redirect_data.present?
-        begin
-          decoded = JSON.parse(Base64.strict_decode64(redirect_data.to_s))
-          Rails.logger.info("[Esewa] redirect payload for #{payment_session.external_id}: #{decoded.slice('status', 'transaction_code', 'total_amount').inspect}")
-        rescue StandardError => e
-          Rails.logger.warn("[Esewa] could not decode redirect data: #{e.message}")
-        end
-      end
+      # The redirect payload is graded for diagnostics only — the status
+      # check below is what decides the verdict.
+      log_redirect_diagnostics(payment_session, redirect_data) if redirect_data.present?
 
       expected_total = format_esewa_amount(payment_session.amount)
       result = verify_transaction(
@@ -257,6 +280,63 @@ module Spree
     end
 
     private
+
+    # Decode + signature-grade the browser-supplied redirect payload for
+    # diagnostics only — the verdict always comes from the server-to-server
+    # status check, so a bad signature is logged loudly but can never flip
+    # the outcome by itself.
+    def log_redirect_diagnostics(payment_session, redirect_data)
+      decoded = decode_esewa_redirect_data(redirect_data)
+      if decoded.nil?
+        Rails.logger.warn("[Esewa] could not decode redirect data: #{redirect_data.to_s.truncate(80).inspect}")
+        return
+      end
+
+      signature_valid = validate_esewa_response(redirect_data)
+      Rails.logger.info(
+        "[Esewa] redirect payload for #{payment_session.external_id}: " \
+        "#{decoded.slice('status', 'transaction_code', 'total_amount').inspect} " \
+        "(signature valid: #{signature_valid})"
+      )
+      return if signature_valid
+
+      Rails.logger.warn(
+        "[Esewa] redirect signature did not verify for #{payment_session.external_id} — " \
+        'client payload ignored, verdict comes from the status-check API'
+      )
+    end
+
+    # Base64-decode + parse the redirect `data` param. Returns the decoded
+    # Hash (string keys) or nil when it is blank / not Base64 / not JSON.
+    # Padding is added before the strict decode so an unpadded payload from
+    # eSewa still parses — authenticity is enforced by the signature check,
+    # not by the decoder.
+    def decode_esewa_redirect_data(data)
+      compact = data.to_s.strip
+      return nil if compact.blank?
+
+      remainder = compact.length % 4
+      padded = remainder.zero? ? compact : compact + ('=' * (4 - remainder))
+      parsed = JSON.parse(Base64.strict_decode64(padded))
+      parsed.is_a?(Hash) ? parsed : nil
+    rescue ArgumentError, JSON::ParserError
+      nil
+    end
+
+    # Render a decoded JSON value exactly as eSewa signed it: strings
+    # verbatim, numbers in canonical form (110.0, not "110.0"), booleans
+    # lower-case, null as empty — otherwise the rebuilt message would
+    # never match the signature eSewa computed.
+    def esewa_signature_value(value)
+      case value
+      when String then value
+      when true then 'true'
+      when false then 'false'
+      when nil then ''
+      when Numeric then value.to_s
+      else JSON.generate(value)
+      end
+    end
 
     # The Store API hands us ActionController::Parameters (not a Hash) for
     # external_data/params — normalize without assuming Hash.
