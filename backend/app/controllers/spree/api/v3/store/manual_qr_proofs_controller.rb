@@ -118,7 +118,15 @@ module Spree
             method = latest&.payment_method
             return method if method.is_a?(Spree::PaymentMethod::ManualQr)
 
-            current_store.payment_methods.find_by(type: Spree::PaymentMethod::ManualQr.sti_name)
+            # No QR payment on this order yet — fall back to the store's
+            # storefront-visible QR methods in display order (with several QR
+            # options configured — Fonepay, bank QR, … — an arbitrary
+            # `find_by` could pick a hidden or inactive one).
+            current_store.payment_methods.
+              where(type: Spree::PaymentMethod::ManualQr.sti_name).
+              active.available_on_front_end.
+              order(:position, :id).
+              first
           end
 
           # A re-upload is only meaningful when the latest Manual QR payment

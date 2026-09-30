@@ -9,7 +9,10 @@ RSpec.describe Spree::PaymentMethod::ManualQr, type: :model do
   let!(:store) { @default_store || create(:store) }
   before do
     store.markets.update_all(currency: 'NPR') if store.respond_to?(:markets)
-    store.update!(supported_currencies: 'USD,NPR') if store.has_attribute?(:supported_currencies)
+    # update_column, not update!: the shared store object may already hold
+    # 'USD,NPR' in memory from a rolled-back example, and update! would skip
+    # the UPDATE — leaving the DB on USD and failing order validations.
+    store.update_column(:supported_currencies, 'USD,NPR') if store.has_attribute?(:supported_currencies)
     store.reload
   end
 
@@ -173,6 +176,99 @@ RSpec.describe Spree::PaymentMethod::ManualQr, type: :model do
       expect(payment.reload).to be_void
       expect(payment.qr_status).to eq('rejected')
       expect(payment.qr_rejection_reason).to eq('Amount does not match.')
+    end
+  end
+
+  describe 'admin alerts (proof uploaded)' do
+    it 'exposes the alert/timeout preferences with sensible defaults' do
+      expect(payment_method.preferred_alert_emails).to eq('')
+      expect(payment_method.preferred_alert_webhook_url).to eq('')
+      expect(payment_method.preferred_order_timeout_hours).to eq(24)
+      expect(payment_method.preference_type(:order_timeout_hours)).to eq(:integer)
+    end
+
+    it 'parses the configured alert emails and ignores blanks/whitespace' do
+      payment_method.update!(preferred_alert_emails: 'a@example.com,  b@example.com ,')
+
+      expect(payment_method.alert_recipients).to eq(%w[a@example.com b@example.com])
+    end
+
+    it 'falls back to the store staff when no alert emails are configured' do
+      # without_admin_role: we attach the role ourselves on this store (the
+      # factory would default the resource to Spree::Store.current).
+      staff = create(:admin_user, email: 'staff@example.com', without_admin_role: true)
+      Spree::RoleUser.create!(
+        user: staff,
+        role: Spree::Role.default_admin_role,
+        resource: store,
+        store: store
+      )
+
+      expect(payment_method.alert_recipients).to include('staff@example.com')
+    end
+
+    it 'enqueues the alert when a proof becomes a pending payment' do
+      session = attach_session_proof(build_session)
+
+      expect {
+        payment_method.complete_payment_session(payment_session: session, params: {})
+      }.to have_enqueued_job(Spree::ManualQrAlertJob)
+    end
+
+    it 'does not re-alert when an already-pending session completes again' do
+      session = attach_session_proof(build_session)
+      payment_method.complete_payment_session(payment_session: session, params: {})
+      session.reload
+
+      expect {
+        payment_method.complete_payment_session(payment_session: session, params: {})
+      }.not_to have_enqueued_job(Spree::ManualQrAlertJob)
+    end
+  end
+
+  describe 'multiple QR methods (Fonepay, bank QR, …)' do
+    let(:fonepay) do
+      described_class.create!(
+        name: 'Fonepay QR', active: true, display_on: 'front_end', store: store,
+        preferred_instructions: 'Scan with the Fonepay app.'
+      )
+    end
+
+    let(:bank_qr) do
+      described_class.create!(
+        name: 'Bank QR', active: true, display_on: 'front_end', store: store,
+        preferred_instructions: 'Pay to the ArghaMart bank account.'
+      )
+    end
+
+    it 'offers every active storefront QR method to the storefront' do
+      payment_method && fonepay && bank_qr # create them before loading the order
+
+      expect(fresh_order.payment_methods).to include(payment_method, fonepay, bank_qr)
+    end
+
+    it 'keeps each method’s QR payload separate' do
+      fonepay_session = fonepay.create_payment_session(order: order, external_data: {})
+      bank_session = bank_qr.create_payment_session(order: order, external_data: {})
+
+      expect(fonepay_session.external_data['instructions']).to eq('Scan with the Fonepay app.')
+      expect(bank_session.external_data['instructions']).to eq('Pay to the ArghaMart bank account.')
+      expect(fonepay_session.payment_method).to eq(fonepay)
+      expect(bank_session.payment_method).to eq(bank_qr)
+    end
+
+    it 'hides inactive or back-end-only QR methods from the storefront' do
+      default_method = payment_method # instantiate before the receiver call
+      bank_qr.update!(active: false)
+      fonepay.update!(display_on: 'back_end')
+
+      expect(fresh_order.payment_methods).to eq([default_method])
+    end
+
+    # `Order#payment_methods` memoizes per instance; load a fresh one so the
+    # assertions reflect the methods as they are now, not at order creation.
+    def fresh_order
+      Spree::Order.find(order.id)
     end
   end
 end

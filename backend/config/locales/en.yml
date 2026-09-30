@@ -32,3 +32,38 @@ en:
     qr_code: "Payment QR code"
     qr_code_help: "Scanned by the customer in their banking or wallet app. PNG, JPG or WebP, max 5 MB."
     qr_instructions_help: "Shown at checkout under the QR code, e.g. account name and number."
+    # Review panel on the admin payment card: money + fraud checks.
+    qr_amount_due: "Amount due (order)"
+    qr_payment_amount: "This payment"
+    qr_amount_mismatch: "Payment amount does not match the order's amount due — check the screenshot carefully."
+    qr_transaction_reused:
+      one: "Transaction ID is also used on %{count} other payment"
+      other: "Transaction ID is also used on %{count} other payments"
+    qr_proof_reused:
+      one: "Identical screenshot already filed on %{count} other payment"
+      other: "Identical screenshot already filed on %{count} other payments"
+    # Payment-method form (Settings > Payments) help text.
+    qr_multi_method_help: "Tip: add one Manual QR method per QR option (Fonepay QR, bank QR, wallet QR, …) — each appears at checkout as its own choice with its own QR image and instructions."
+    qr_alerts_help: "“Alert emails” and “Alert webhook URL” notify the admin the moment a screenshot needs review; “Order timeout hours” auto-cancels unverified QR orders and releases their stock (0 disables it)."
+    # Job strings (alert webhook payload + auto-cancellation reason).
+    manual_qr:
+      alert_text: "%{store}: manual QR proof awaiting review — order #%{number}, %{amount} (%{method})."
+      expired_rejection_reason: "Payment was not verified within %{hours} hours — the order was canceled automatically."
+    # Alert email.
+    manual_qr_mailer:
+      proof_uploaded:
+        subject: "%{store}: payment screenshot awaiting review #%{number}"
+        title: "Payment screenshot awaiting review"
+        greeting: "A customer uploaded a manual QR payment screenshot for %{store} that still needs verification."
+        order_line: "Order: #%{number}"
+        method_line: "Payment method: %{method}"
+        amount_due: "Amount due: %{amount}"
+        payment_amount: "Payment claimed: %{amount}"
+        transaction_id: "Customer transaction ID: %{transaction_id}"
+        action: "Review payment"
+        footer: "This alert was sent automatically when the screenshot was uploaded. Approve the payment only after checking the amount and transaction ID."
+    # Labels for the Manual QR preferences (rendered by the admin form's
+    # preference_fields helper, which looks up Spree.t(<preference key>).
+    alert_emails: "Alert emails"
+    alert_webhook_url: "Alert webhook URL"
+    order_timeout_hours: "Order timeout (hours)"

@@ -31,6 +31,11 @@ Rails.application.configure do
   # ActionMailer::Base.deliveries array.
   config.action_mailer.delivery_method = :test
 
+  # Keep Active Job in-process for specs (the app default is Solid Queue,
+  # which would write enqueued jobs to the DB and dodge assertions like
+  # `have_enqueued_job`).
+  config.active_job.queue_adapter = :test
+
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: "example.com" }
 

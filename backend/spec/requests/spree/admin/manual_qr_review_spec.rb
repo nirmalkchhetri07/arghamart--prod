@@ -9,7 +9,10 @@ RSpec.describe 'Admin Manual QR review', type: :request do
   # Manual QR is NPR-only: teach the test store NPR (markets + legacy column).
   let!(:store_override) do
     store.markets.update_all(currency: 'NPR') if store.respond_to?(:markets)
-    store.update!(supported_currencies: 'USD,NPR') if store.has_attribute?(:supported_currencies)
+    # update_column, not update!: the shared store object may already hold
+    # 'USD,NPR' in memory from a rolled-back example, and update! would skip
+    # the UPDATE — leaving the DB on USD.
+    store.update_column(:supported_currencies, 'USD,NPR') if store.has_attribute?(:supported_currencies)
     store.reload
   end
 
@@ -28,11 +31,11 @@ RSpec.describe 'Admin Manual QR review', type: :request do
     create(:completed_order_with_totals, store: store, currency: 'NPR')
   end
 
-  def pending_qr_payment
+  def pending_qr_payment(txn_id: nil, amount: nil)
     order.payments.destroy_all
     payment = order.payments.create!(
       payment_method: qr_method,
-      amount: order.reload.total,
+      amount: amount || order.reload.total,
       response_code: SecureRandom.uuid,
       skip_source_requirement: true
     )
@@ -40,6 +43,7 @@ RSpec.describe 'Admin Manual QR review', type: :request do
       io: File.open(Rails.root.join('spec/fixtures/files/qr-proof.png')),
       filename: 'qr-proof.png', content_type: 'image/png'
     )
+    payment.update!(qr_transaction_id: txn_id) if txn_id
     payment.pend!
     payment.reload
   end
@@ -98,5 +102,65 @@ RSpec.describe 'Admin Manual QR review', type: :request do
     expect(response.body).to include('Approve')
     expect(response.body).to include('Reject')
     expect(response.body).to include('Pending verification')
+  end
+
+  # ── Duplicate-proof and amount checks ──────────────────────────────────
+
+  it 'shows the amount due next to the screenshot and flags a short payment' do
+    pending_qr_payment(txn_id: 'TXN-SHORT', amount: order.total - 1)
+
+    get "/admin/orders/#{order.to_param}"
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(Spree.t(:qr_amount_due))
+    expect(response.body).to include(Spree.t(:qr_payment_amount))
+    # The amount mismatch warning (a plain substring avoids HTML escaping).
+    expect(response.body).to include('does not match the order')
+  end
+
+  it 'does not flag a payment that matches the amount due' do
+    pending_qr_payment(txn_id: 'TXN-MATCH')
+
+    get "/admin/orders/#{order.to_param}"
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include('does not match the order')
+  end
+
+  it 'flags a transaction id and screenshot already used on another payment' do
+    pending_qr_payment(txn_id: 'TXN-DUP-9')
+
+    other_order = create(:completed_order_with_totals, store: store, currency: 'NPR')
+    other = other_order.payments.create!(
+      payment_method: qr_method,
+      amount: other_order.total,
+      response_code: SecureRandom.uuid,
+      skip_source_requirement: true
+    )
+    other.proof_image.attach(
+      io: File.open(Rails.root.join('spec/fixtures/files/qr-proof.png')),
+      filename: 'qr-proof.png', content_type: 'image/png'
+    )
+    other.update!(qr_transaction_id: 'TXN-DUP-9')
+    other.pend!
+
+    get "/admin/orders/#{order.to_param}"
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('Transaction ID is also used on 1 other payment')
+    expect(response.body).to include('Identical screenshot already filed on 1 other payment')
+  end
+
+  it 'stays quiet when the transaction id and screenshot are unique' do
+    payment = pending_qr_payment(txn_id: 'TXN-ONLY-ONCE')
+    # A different screenshot than the duplicate test: no second payment exists,
+    # so both checks must come back clean.
+    expect(payment.qr_transaction_id_duplicate_count).to eq(0)
+    expect(payment.qr_proof_duplicate_count).to eq(0)
+
+    get "/admin/orders/#{order.to_param}"
+
+    expect(response.body).not_to include('is also used on')
+    expect(response.body).not_to include('already filed on')
   end
 end

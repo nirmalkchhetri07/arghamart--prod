@@ -1,0 +1,23 @@
+<%= render layout: 'spree/shared/mailer_hero' do %>
+  <h1><%= Spree.t('manual_qr_mailer.proof_uploaded.title') %></h1>
+  <p class="greeting"><%= Spree.t('manual_qr_mailer.proof_uploaded.greeting', store: @current_store.name) %></p>
+
+  <p>
+    <%= Spree.t('manual_qr_mailer.proof_uploaded.order_line', number: @order.number) %><br />
+    <%= Spree.t('manual_qr_mailer.proof_uploaded.method_line', method: @payment_method.try(:name)) %><br />
+    <%= Spree.t('manual_qr_mailer.proof_uploaded.amount_due', amount: @order.display_amount_due) %><br />
+    <%= Spree.t('manual_qr_mailer.proof_uploaded.payment_amount', amount: @payment.display_amount) %>
+    <% if @payment.qr_transaction_id.present? %>
+      <br />
+      <%= Spree.t('manual_qr_mailer.proof_uploaded.transaction_id', transaction_id: @payment.qr_transaction_id) %>
+    <% end %>
+  </p>
+
+  <% if @payment.qr_admin_review_url.present? %>
+    <%= render 'spree/shared/mailer_button',
+               url: @payment.qr_admin_review_url,
+               label: Spree.t('manual_qr_mailer.proof_uploaded.action') %>
+  <% end %>
+
+  <p class="sub"><%= Spree.t('manual_qr_mailer.proof_uploaded.footer') %></p>
+<% end %>

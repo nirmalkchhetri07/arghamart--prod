@@ -21,6 +21,17 @@
 #      payment) or Rejects (voids it with a reason). A rejected payment can be
 #      replaced by uploading a new proof, which creates a fresh pending payment
 #      — the voided one stays as history.
+#
+# Admin-side guard rails (all configured per method, no code needed):
+#   * `alert_emails` / `alert_webhook_url` — notify the admin the moment a
+#     proof becomes reviewable (Spree::ManualQrAlertJob → email + optional
+#     JSON webhook for Slack/n8n → Telegram/WhatsApp relays).
+#   * `order_timeout_hours` — cancel QR orders nobody verified in time and
+#     release their stock (Spree::ManualQrExpireOrdersJob, recurring).
+#
+# Multiple methods are first-class: create one ManualQr method per QR option
+# ("Fonepay QR", "Bank QR", "eSewa wallet QR", …) and each shows up at
+# checkout as its own choice with its own QR image and instructions.
 module Spree
   class PaymentMethod::ManualQr < Spree::PaymentMethod
     # Screenshot content types we accept as proof (also enforced server-side
@@ -36,6 +47,34 @@ module Spree
               if: -> { qr_image.attached? }
 
     preference :instructions, :text, default: ''
+
+    # ── Admin alerts ─────────────────────────────────────────────────────
+    # Who hears about a freshly uploaded proof (Spree::ManualQrAlertJob).
+    # `alert_emails`: comma-separated addresses; blank → every staff member
+    # with a role on this method's store.
+    preference :alert_emails, :string, default: ''
+    # `alert_webhook_url`: optional HTTP endpoint posted a JSON body with a
+    # Slack-style `text` plus structured fields — n8n/Make/Zapier → Telegram
+    # or WhatsApp, or `api.telegram.org/bot<TOKEN>/sendMessage?chat_id=…`
+    # (posted form-encoded, chat_id rides in the query string).
+    preference :alert_webhook_url, :string, default: ''
+
+    # ── Order timeout ────────────────────────────────────────────────────
+    # Hours after completion during which the QR payment must be verified by
+    # an admin. Past that, Spree::ManualQrExpireOrdersJob cancels the order
+    # and releases its stock. 0 (or less) disables the timeout.
+    preference :order_timeout_hours, :integer, default: 24
+
+    # Alert recipients: the configured list, or — when that is blank — every
+    # staff member with a role on this method's store.
+    #
+    # @return [Array<String>] emails, possibly empty (nothing to send)
+    def alert_recipients
+      configured = preferred_alert_emails.to_s.split(',').map(&:strip).reject(&:empty?)
+      return configured if configured.any?
+
+      store_staff_emails
+    end
 
     def session_required?
       true
@@ -59,6 +98,38 @@ module Spree
     # foreign-currency orders instead of quoting an amount the QR can't match.
     def available_for_order?(order)
       super && order.currency == 'NPR'
+    end
+
+    # ── Gateway-style no-ops ─────────────────────────────────────────────
+    # Money never moves through us: the customer pays in their own banking
+    # app and an admin verifies the screenshot. Spree's cancel path
+    # (Spree::Order#after_cancel → Payment#void_transaction!) still calls
+    # `void` on every incomplete payment, so answering "success, nothing to
+    # do" keeps auto-cancellation (Spree::ManualQrExpireOrdersJob) and the
+    # admin Reject flow from blowing up on a missing gateway method.
+    def actions
+      %w{void}
+    end
+
+    def can_void?(payment)
+      payment.state != 'void'
+    end
+
+    def void(*)
+      simulated_successful_billing_response
+    end
+
+    def cancel(*)
+      simulated_successful_billing_response
+    end
+
+    def credit(*)
+      simulated_successful_billing_response
+    end
+
+    # No gateway behind Manual QR — the void above is the whole story.
+    def simulated_successful_billing_response
+      Spree::PaymentResponse.new(true, '', {}, {})
     end
 
     # Storefront passes nothing extra on create; the QR payload below is the
@@ -125,7 +196,14 @@ module Spree
       if payment.present?
         payment.proof_image.attach(payment_session.proof_image.blob) unless payment.proof_image.attached?
         payment.update!(qr_transaction_id: transaction_id) if transaction_id.present?
+
+        was_pending = payment.pending?
         payment.pend! if payment.respond_to?(:can_pend?) ? payment.can_pend? : true
+
+        # The proof just became reviewable for the first time → tell the admin
+        # (email + optional webhook). Re-completing an already-pending session
+        # stays silent.
+        Spree::ManualQrAlertJob.perform_later(payment.id) if !was_pending && payment.pending?
       end
 
       payment_session.complete! unless payment_session.completed?
@@ -137,6 +215,19 @@ module Spree
     end
 
     private
+
+    # Staff addresses for the blank-`alert_emails` fallback: every user with a
+    # role assignment on this method's store (same query the admin dashboard
+    # uses to list a store's staff). Verified against the store, because
+    # RoleUser's `resource` is polymorphic.
+    def store_staff_emails
+      Spree.admin_user_class.
+        joins(:role_users).
+        where(Spree::RoleUser.table_name => { resource: store }).
+        distinct.
+        pluck(:email).
+        compact
+    end
 
     # Public path (not a signed URL): the store QR is identical for every
     # customer, so it needs no authorization. The storefront prefixes it with

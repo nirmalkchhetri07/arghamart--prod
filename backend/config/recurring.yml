@@ -5,12 +5,28 @@
 #     class: MyReportJob
 #     queue: spree_reports
 #     schedule: at 5am every day
+
+# Mirrors production so the Manual QR timeout is observable locally: cancels
+# QR orders whose payment was never verified in time and releases their stock
+# (Spree::PaymentMethod::ManualQr#preferred_order_timeout_hours, default 24h;
+# 0 disables it per method).
+development:
+  expire_pending_manual_qr_orders:
+    class: Spree::ManualQrExpireOrdersJob
+    schedule: every 15 minutes
+
 production:
   # Release checkout stock reservations whose hold expired, so inventory
   # returns to sellable stock promptly.
   expire_stock_reservations:
     class: Spree::StockReservations::ExpireJob
     schedule: every minute
+
+  # Auto-cancel Manual QR orders left unpaid/unverified past the method's
+  # timeout, restocking their shipments (see Spree::ManualQrExpireOrdersJob).
+  expire_pending_manual_qr_orders:
+    class: Spree::ManualQrExpireOrdersJob
+    schedule: every 15 minutes
 
   # Prune EU Omnibus price history past the retention period
   # (Spree::Config[:price_history_retention_days], default 30).

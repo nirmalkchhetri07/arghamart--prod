@@ -140,7 +140,10 @@ services:
     # bundle install is needed. We do bypass bin/docker-entrypoint (it runs
     # db:prepare + assets:precompile, which is wrong for dev — first-time
     # setup goes through `spree init`).
-    command: ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+    # Clear a stale tmp/pids/server.pid first: a container stopped without a
+    # graceful shutdown (restart, reboot, docker kill) leaves it behind and
+    # the next boot aborts with "A server is already running (pid: 1)".
+    command: ["sh", "-c", "rm -f tmp/pids/server.pid && exec bin/rails server -b 0.0.0.0 -p 3000"]
     ports:
       - "${SPREE_PORT:-3000}:3000"
 

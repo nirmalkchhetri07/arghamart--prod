@@ -83,8 +83,10 @@
       <% end %>
     </div>
 
-    <%# Manual QR review: proof screenshot, customer transaction ID,
-        verification status, and Approve/Reject for pending payments. %>
+    <%# Manual QR review: proof screenshot next to the money it must be
+        checked against (amount due vs claimed), the fraud checks (reused
+        transaction ID, re-filed screenshot), verification status, and
+        Approve/Reject for pending payments. %>
     <% if payment.manual_qr? %>
       <div class="mt-4 rounded-xl bg-gray-25 border shadow-xs p-4">
         <p class="mb-2">
@@ -94,21 +96,53 @@
           </span>
         </p>
 
-        <% if payment.qr_transaction_id.present? %>
-          <p class="mb-2 text-sm">
-            <%= Spree.t(:qr_transaction_id) %>:
-            <strong><%= payment.qr_transaction_id %></strong>
-          </p>
-        <% end %>
+        <div class="flex flex-wrap items-start gap-4">
+          <div>
+            <% if payment.proof_image.attached? %>
+              <%= link_to spree.proof_admin_order_payment_path(@order, payment), target: '_blank', rel: 'noopener' do %>
+                <%= image_tag spree.proof_admin_order_payment_path(@order, payment),
+                      class: 'max-w-[320px] rounded border', alt: Spree.t(:qr_proof) %>
+              <% end %>
+            <% else %>
+              <p class="text-sm text-gray-500"><%= Spree.t(:no_qr_proof_uploaded) %></p>
+            <% end %>
+          </div>
 
-        <% if payment.proof_image.attached? %>
-          <%= link_to spree.proof_admin_order_payment_path(@order, payment), target: '_blank', rel: 'noopener' do %>
-            <%= image_tag spree.proof_admin_order_payment_path(@order, payment),
-                  class: 'max-w-[320px] rounded border', alt: Spree.t(:qr_proof) %>
-          <% end %>
-        <% else %>
-          <p class="text-sm text-gray-500"><%= Spree.t(:no_qr_proof_uploaded) %></p>
-        <% end %>
+          <%# The money to check the screenshot against, plus the reuse
+              flags — kept beside the image so review is one glance. %>
+          <div class="text-sm min-w-[220px]">
+            <p class="mb-0.5"><%= Spree.t(:qr_amount_due) %>:</p>
+            <strong class="text-base"><%= @order.display_amount_due %></strong>
+
+            <p class="mb-0.5 mt-2"><%= Spree.t(:qr_payment_amount) %>:</p>
+            <strong class="text-base"><%= payment.display_amount %></strong>
+
+            <% if payment.qr_amount_mismatch? %>
+              <p class="mt-2">
+                <span class="badge badge-warning"><%= icon('alert-circle') %> <%= Spree.t(:qr_amount_mismatch) %></span>
+              </p>
+            <% end %>
+
+            <% if payment.qr_transaction_id.present? %>
+              <p class="mt-2">
+                <%= Spree.t(:qr_transaction_id) %>:
+                <strong><%= payment.qr_transaction_id %></strong>
+              </p>
+            <% end %>
+
+            <% if (transaction_duplicates = payment.qr_transaction_id_duplicate_count).positive? %>
+              <p class="mt-1">
+                <span class="badge badge-danger"><%= icon('alert-circle') %> <%= Spree.t('qr_transaction_reused', count: transaction_duplicates) %></span>
+              </p>
+            <% end %>
+
+            <% if (proof_duplicates = payment.qr_proof_duplicate_count).positive? %>
+              <p class="mt-1">
+                <span class="badge badge-danger"><%= icon('alert-circle') %> <%= Spree.t('qr_proof_reused', count: proof_duplicates) %></span>
+              </p>
+            <% end %>
+          </div>
+        </div>
 
         <% if payment.qr_status == 'rejected' && payment.qr_rejection_reason.present? %>
           <p class="mt-2 text-sm">

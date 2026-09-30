@@ -19,7 +19,10 @@ RSpec.describe 'Store API Manual QR proofs', type: :request do
   # Manual QR is NPR-only: teach the test store NPR (markets + legacy column).
   let!(:store_override) do
     store.markets.update_all(currency: 'NPR') if store.respond_to?(:markets)
-    store.update!(supported_currencies: 'USD,NPR') if store.has_attribute?(:supported_currencies)
+    # update_column, not update!: the shared store object may already hold
+    # 'USD,NPR' in memory from a rolled-back example, and update! would skip
+    # the UPDATE — leaving the DB on USD.
+    store.update_column(:supported_currencies, 'USD,NPR') if store.has_attribute?(:supported_currencies)
     store.reload
   end
 
