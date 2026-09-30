@@ -1,19 +1,47 @@
+# Production stack.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Everything variable lives in .env.production (untracked); every knob below
+# has a safe default so the stack still comes up if one is missing — except
+# POSTGRES_PASSWORD, which fails loudly on purpose. See
+# .env.production.example for the full list.
+#
+# `name:` pins the project to `arghamart-prod` so the existing volumes
+# (arghamart-prod_postgres_data, arghamart-prod_storage_data) are reused even
+# if this folder is renamed or the command runs without -p. Without it compose
+# derives the project name from the directory — a renamed folder would create
+# a SECOND, empty database next to the real one.
+name: arghamart-prod
+
+# Container logs go to stdout; without a cap the docker json-file driver grows
+# without bound and eventually fills the disk. 50 MB per container.
+x-log-rotation: &log-rotation
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
-    image: postgres:18-alpine
+    image: ${POSTGRES_IMAGE:-postgres:18-alpine}
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: spree_production
+      # :? = fail fast if the deploy command forgot --env-file .env.production;
+      # otherwise this would interpolate to an empty string and the app could
+      # never authenticate against the initialized volume.
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is unset — run compose with --env-file .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-spree_production}
       PGDATA: /var/lib/postgresql/18/docker
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: pg_isready -U postgres
+      test: pg_isready -U ${POSTGRES_USER:-postgres}
       interval: 5s
       timeout: 5s
       retries: 10
+    logging: *log-rotation
 
   web:
     build:
@@ -22,7 +50,7 @@ services:
     restart: unless-stopped
     env_file: .env.production
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/spree_production
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is unset — run compose with --env-file .env.production}@postgres:5432/${POSTGRES_DB:-spree_production}
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,14 +58,15 @@ services:
       - storage_data:/rails/storage
     ports:
       - target: 3000
-        published: 3000
-        host_ip: 127.0.0.1
+        published: ${WEB_PORT:-3000}
+        host_ip: ${WEB_BIND_IP:-127.0.0.1}
     healthcheck:
       test: curl -fsS http://localhost:3000/up || exit 1
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 60s
+    logging: *log-rotation
 
 volumes:
   postgres_data:
