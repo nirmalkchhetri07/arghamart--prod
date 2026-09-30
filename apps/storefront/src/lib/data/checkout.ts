@@ -1,6 +1,6 @@
 "use server";
 
-import type { AddressParams, Cart } from "@spree/sdk";
+import type { Cart } from "@spree/sdk";
 import { SpreeError } from "@spree/sdk";
 import { updateTag } from "next/cache";
 import {
@@ -12,6 +12,7 @@ import {
   requireCartId,
   type Surface,
 } from "@/lib/spree";
+import type { NepalAddressParams } from "@/lib/utils/address";
 import { getCart } from "./cart";
 import { getOrder } from "./orders";
 import { actionResult, withFallback } from "./utils";
@@ -144,8 +145,8 @@ export async function getCompletedOrder(cartId: string): Promise<Cart | null> {
 export async function updateOrderAddresses(
   cartId: string,
   addresses: {
-    shipping_address?: AddressParams;
-    billing_address?: AddressParams;
+    shipping_address?: NepalAddressParams;
+    billing_address?: NepalAddressParams;
     shipping_address_id?: string;
     billing_address_id?: string;
     use_shipping?: boolean;

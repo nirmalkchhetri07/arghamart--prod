@@ -12,6 +12,7 @@ interface DeliveryMethodSectionProps {
   ) => Promise<void>;
   processing: boolean;
   errors?: string[];
+  feeNote?: string | null;
 }
 
 export function DeliveryMethodSection({
@@ -19,6 +20,7 @@ export function DeliveryMethodSection({
   onDeliveryRateSelect,
   processing,
   errors,
+  feeNote,
 }: DeliveryMethodSectionProps) {
   const t = useTranslations("checkout");
 
@@ -99,6 +101,7 @@ export function DeliveryMethodSection({
               </div>
             );
           })}
+          {feeNote && <p className="text-xs text-gray-500 pt-1">{feeNote}</p>}
         </div>
       )}
     </div>

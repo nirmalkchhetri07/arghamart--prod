@@ -7,12 +7,14 @@ import { getCheckoutOrder } from "@/lib/data/checkout";
 import { isAuthenticated as checkAuth } from "@/lib/data/cookies";
 import { getCountry } from "@/lib/data/countries";
 import { getMarketCountries, resolveMarket } from "@/lib/data/markets";
+import { getNepalProvinces, type NepalProvince } from "@/lib/data/nepal";
 
 import { CheckoutPageContent } from "./CheckoutPageContent";
 
 export interface CheckoutInitialData {
   cart: Cart;
   countries: Country[];
+  provinces: NepalProvince[];
   savedAddresses: Address[];
   isAuthenticated: boolean;
 }
@@ -34,10 +36,11 @@ async function CheckoutDataLoader({ params }: CheckoutPageProps) {
   const authStatus = await checkAuth();
 
   // Fetch initial data in parallel during SSR
-  const [cartData, market, addressesData] = await Promise.all([
+  const [cartData, market, addressesData, nepalData] = await Promise.all([
     getCheckoutOrder(cartId),
     resolveMarket(urlCountry).catch(() => null),
     authStatus ? getAddresses() : Promise.resolve({ data: [] as Address[] }),
+    getNepalProvinces().catch(() => ({ data: [] })),
   ]);
 
   // Redirect to order-placed if already complete
@@ -63,6 +66,7 @@ async function CheckoutDataLoader({ params }: CheckoutPageProps) {
     ? {
         cart: cartData,
         countries: countriesData.data,
+        provinces: nepalData.data,
         savedAddresses: addressesData.data,
         isAuthenticated: authStatus,
       }

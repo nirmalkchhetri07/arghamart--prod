@@ -43,10 +43,12 @@ import {
 import { isAuthenticated as checkAuth } from "@/lib/data/cookies";
 import { getCountry } from "@/lib/data/countries";
 import { getMarketCountries, resolveMarket } from "@/lib/data/markets";
+import { getNepalProvinces, type NepalProvince } from "@/lib/data/nepal";
 import {
   completeCheckoutOrder,
   completeCheckoutPaymentSession,
 } from "@/lib/data/payment";
+import type { NepalAddress } from "@/lib/utils/address";
 import { extractBasePath } from "@/lib/utils/path";
 import { CheckoutSidebar } from "./CheckoutSidebar";
 import type { CheckoutInitialData } from "./page";
@@ -107,6 +109,9 @@ function CheckoutPageContentInner({
   const [savedAddresses, setSavedAddresses] = useState<Address[]>(
     initialData?.savedAddresses ?? [],
   );
+  const [provinces, setProvinces] = useState<NepalProvince[]>(
+    initialData?.provinces ?? [],
+  );
   const [isAuthenticated, setIsAuthenticated] = useState(
     initialData?.isAuthenticated ?? false,
   );
@@ -123,6 +128,22 @@ function CheckoutPageContentInner({
   const [isSessionPayment, setIsSessionPayment] = useState(true);
 
   const fulfillments = cart?.fulfillments ?? [];
+
+  // When the district has no configured fee, the calculator falls back to
+  // the default fee instead of failing — say so under the delivery method.
+  const defaultFeeNote = (() => {
+    const shipAddr = cart?.shipping_address as NepalAddress | null;
+    if (!shipAddr?.district_id) return null;
+    const fee = shipAddr.district_shipping_fee;
+    const feeUnset = fee == null || fee === "" || Number.parseFloat(fee) === 0;
+    if (!feeUnset) return null;
+    const nepalSelected = (fulfillments ?? []).some((f) =>
+      (f.delivery_rates ?? []).some(
+        (r) => r.selected && /nepal delivery/i.test(r.name ?? ""),
+      ),
+    );
+    return nepalSelected ? t("defaultFeeApplied") : null;
+  })();
 
   const cartRef = useRef(cart);
   cartRef.current = cart;
@@ -199,12 +220,14 @@ function CheckoutPageContentInner({
     if (!paymentError) setError(null);
 
     try {
-      const [cartData, market, addressesData, authStatus] = await Promise.all([
-        getCheckoutOrder(cartId),
-        resolveMarket(urlCountry).catch(() => null),
-        getAddresses(),
-        checkAuth(),
-      ]);
+      const [cartData, market, addressesData, authStatus, nepalData] =
+        await Promise.all([
+          getCheckoutOrder(cartId),
+          resolveMarket(urlCountry).catch(() => null),
+          getAddresses(),
+          checkAuth(),
+          getNepalProvinces().catch(() => ({ data: [] })),
+        ]);
 
       const countriesData = market
         ? await getMarketCountries(market.id).catch(() => ({
@@ -227,6 +250,7 @@ function CheckoutPageContentInner({
       setCountries(countriesData.data);
       setSavedAddresses(addressesData.data);
       setIsAuthenticated(authStatus);
+      if (nepalData.data.length > 0) setProvinces(nepalData.data);
 
       return cartData;
     } catch {
@@ -322,6 +346,31 @@ function CheckoutPageContentInner({
   }, []);
 
   // Handle auto-save (address + email on blur)
+  // After a district change, auto-select the matching "Nepal Delivery"
+  // rate so the shipping fee and order total update without manual action.
+  const lastDistrictRef = useRef<string | null>(
+    (initialData?.cart?.shipping_address as NepalAddress | null)?.district_id ??
+      null,
+  );
+
+  const autoSelectNepalRate = useCallback(async (order: Cart) => {
+    for (const fulfillment of order.fulfillments ?? []) {
+      const nepalRate = (fulfillment.delivery_rates ?? []).find(
+        (rate) => !rate.selected && /nepal delivery/i.test(rate.name ?? ""),
+      );
+      if (!nepalRate) continue;
+      const result = await selectDeliveryRate(
+        order.id,
+        fulfillment.id,
+        nepalRate.id,
+      );
+      if (result.success && result.cart) {
+        setCart(result.cart);
+        return;
+      }
+    }
+  }, []);
+
   const handleAutoSave = useCallback(
     async (addressData: {
       email: string;
@@ -352,6 +401,13 @@ function CheckoutPageContentInner({
 
         if (updateResult.cart) {
           setCart(updateResult.cart);
+          const nextDistrict =
+            (updateResult.cart.shipping_address as NepalAddress | null)
+              ?.district_id ?? null;
+          if (nextDistrict && nextDistrict !== lastDistrictRef.current) {
+            lastDistrictRef.current = nextDistrict;
+            await autoSelectNepalRate(updateResult.cart);
+          }
         }
       } catch {
         setError(tRef.current("generalError"));
@@ -359,7 +415,7 @@ function CheckoutPageContentInner({
         setSaving(false);
       }
     },
-    [],
+    [autoSelectNepalRate],
   );
 
   // Handle delivery rate selection
@@ -515,6 +571,20 @@ function CheckoutPageContentInner({
     }
   }, []);
 
+  // Nepal provinces for the address comboboxes (cached server-side).
+  const fetchProvinces = useCallback(async () => {
+    const result = await getNepalProvinces().catch(() => ({ data: [] }));
+    if (result.data.length > 0) setProvinces(result.data);
+    return result.data;
+  }, []);
+
+  // Client-side navigation starts with no provinces — fill them in.
+  useEffect(() => {
+    if (provinces.length === 0) {
+      fetchProvinces();
+    }
+  }, [provinces.length, fetchProvinces]);
+
   // Update a saved address
   const handleUpdateSavedAddress = useCallback(
     async (id: string, data: AddressParams): Promise<Address> => {
@@ -570,6 +640,17 @@ function CheckoutPageContentInner({
     const shippingPhone = freshOrder.shipping_address?.phone?.trim();
     if (!shippingPhone) {
       errorsBySection.address = [t("phoneRequired")];
+    }
+
+    // Nepal checkout requires a district — legacy saved addresses may not
+    // have one. Block with a prompt to fix it instead of failing obscurely.
+    const shipDistrict = (freshOrder.shipping_address as NepalAddress | null)
+      ?.district_id;
+    if (!shipDistrict) {
+      errorsBySection.address = [
+        ...(errorsBySection.address ?? []),
+        t("districtRequired"),
+      ];
     }
 
     // Check requirements — skip "payment" since we handle that via
@@ -716,6 +797,8 @@ function CheckoutPageContentInner({
           <AddressSection
             cart={cart}
             countries={countries}
+            provinces={provinces}
+            loadingProvinces={provinces.length === 0}
             savedAddresses={savedAddresses}
             isAuthenticated={isAuthenticated}
             signInUrl={`${basePath}/account?redirect=${encodeURIComponent(pathname)}`}
@@ -739,6 +822,7 @@ function CheckoutPageContentInner({
             onDeliveryRateSelect={handleDeliveryRateSelect}
             processing={processing}
             errors={sectionErrors.shipping}
+            feeNote={defaultFeeNote}
           />
         </div>
 

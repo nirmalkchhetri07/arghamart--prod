@@ -4,6 +4,11 @@ export { CouponCode } from "./CouponCode";
 export { DeliveryMethodSection } from "./DeliveryMethodSection";
 export { ExpressCheckoutButton } from "./ExpressCheckoutButton";
 export type {
+  NepalAddressFormHandle,
+  NepalAddressParams,
+} from "./NepalAddressForm";
+export { NepalAddressForm } from "./NepalAddressForm";
+export type {
   PaymentCompleteResult,
   PaymentSectionHandle,
 } from "./PaymentSection";

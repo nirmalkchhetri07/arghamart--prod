@@ -340,7 +340,10 @@
     "manualQrTransactionPlaceholder": "कारोबार ID (वैकल्पिक)",
     "manualQrNoFile": "कृपया पहिले आफ्नो भुक्तानीको स्क्रिनसट छान्नुहोस्।",
     "manualQrInvalidFile": "कृपया 5 MB भन्दा सानो तस्बिर (PNG, JPG वा WebP) छान्नुहोस्।",
-    "manualQrNoQr": "QR कोड उपलब्ध छैन — कृपया सहयोगका लागि सम्पर्क गर्नुहोस्।"
+    "manualQrNoQr": "QR कोड उपलब्ध छैन — कृपया सहयोगका लागि सम्पर्क गर्नुहोस्।",
+    "districtRequired": "डेलिभरी ठेगानाका लागि जिल्ला छान्नुहोस्।",
+    "selectDistrictPrompt": "तपाईंको ठेगानामा जिल्ला छुटेको छ। भुक्तानी गर्नुअघि सच्याउनुहोस् वा अर्को ठेगाना छान्नुहोस्।",
+    "defaultFeeApplied": "तपाईंको जिल्लाका लागि मानक डेलिभरी शुल्क लागू गरिएको छ।"
   },
   "address": {
     "firstName": "पहिलो नाम",
@@ -371,7 +374,28 @@
     "edit": "सम्पादन",
     "failedToDeleteAddress": "ठेगाना हटाउन सकिएन। पुनः प्रयास गर्नुहोस्।",
     "addFirstAddress": "तपाईंको पहिलो ठेगाना थप्नुहोस्",
-    "addAddress": "ठेगाना थप्नुहोस्"
+    "addAddress": "ठेगाना थप्नुहोस्",
+    "fullName": "पूरा नाम",
+    "province": "प्रदेश",
+    "district": "जिल्ला",
+    "selectProvince": "प्रदेश छान्नुहोस्",
+    "searchProvince": "प्रदेश खोज्नुहोस्",
+    "noProvinceFound": "कुनै प्रदेश भेटिएन",
+    "selectDistrict": "जिल्ला छान्नुहोस्",
+    "searchDistrict": "जिल्ला खोज्नुहोस्",
+    "noDistrictFound": "कुनै जिल्ला भेटिएन",
+    "selectProvinceFirst": "पहिले प्रदेश छान्नुहोस्",
+    "cityMunicipality": "सहर वा नगरपालिका",
+    "zipCodeOptional": "हुलाक कोड (वैकल्पिक)",
+    "selectDistrictPrompt": "कृपया आफ्नो जिल्ला छान्नुहोस्",
+    "fixAddress": "सच्याउनुहोस्",
+    "fullNameRequired": "आफ्नो पूरा नाम लेख्नुहोस्",
+    "phoneRequired": "फोन नम्बर लेख्नुहोस्",
+    "phoneInvalid": "मान्य नेपाली फोन नम्बर लेख्नुहोस्",
+    "provinceRequired": "आफ्नो प्रदेश छान्नुहोस्",
+    "districtRequired": "आफ्नो जिल्ला छान्नुहोस्",
+    "streetRequired": "आफ्नो ठेगाना लेख्नुहोस्",
+    "cityRequired": "आफ्नो सहर वा नगरपालिका लेख्नुहोस्"
   },
   "account": {
     "myAccount": "मेरो खाता",

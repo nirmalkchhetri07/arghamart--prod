@@ -282,7 +282,10 @@
     "manualQrTransactionPlaceholder": "ID de transaction (facultatif)",
     "manualQrNoFile": "Veuillez d'abord sélectionner votre capture de paiement.",
     "manualQrInvalidFile": "Choisissez une image (PNG, JPG ou WebP) de moins de 5 Mo.",
-    "manualQrNoQr": "QR code indisponible — veuillez contacter le support."
+    "manualQrNoQr": "QR code indisponible — veuillez contacter le support.",
+    "districtRequired": "Select a district for the shipping address.",
+    "selectDistrictPrompt": "Your address is missing a district. Edit it or choose a different address before paying.",
+    "defaultFeeApplied": "A standard delivery fee applies for your district."
   },
   "address": {
     "firstName": "Prenom",
@@ -313,7 +316,28 @@
     "edit": "Modifier",
     "failedToDeleteAddress": "Echec de la suppression de l'adresse. Veuillez reessayer.",
     "addFirstAddress": "Ajoutez votre premiere adresse",
-    "addAddress": "Ajouter une adresse"
+    "addAddress": "Ajouter une adresse",
+    "fullName": "Full name",
+    "province": "Province",
+    "district": "District",
+    "selectProvince": "Select province",
+    "searchProvince": "Search provinces",
+    "noProvinceFound": "No province found",
+    "selectDistrict": "Select district",
+    "searchDistrict": "Search districts",
+    "noDistrictFound": "No district found",
+    "selectProvinceFirst": "Select a province first",
+    "cityMunicipality": "City or municipality",
+    "zipCodeOptional": "ZIP / Postal code (optional)",
+    "selectDistrictPrompt": "Please select your district",
+    "fixAddress": "Fix address",
+    "fullNameRequired": "Enter your full name",
+    "phoneRequired": "Enter a valid phone number",
+    "phoneInvalid": "Enter a valid Nepali phone number",
+    "provinceRequired": "Select your province",
+    "districtRequired": "Select your district",
+    "streetRequired": "Enter your street address",
+    "cityRequired": "Enter your city or municipality"
   },
   "account": {
     "myAccount": "Mon compte",

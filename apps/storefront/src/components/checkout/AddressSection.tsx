@@ -8,19 +8,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AddressEditModal } from "@/components/checkout/AddressEditModal";
 import { AddressFormFields } from "@/components/checkout/AddressFormFields";
 import { AddressSelector } from "@/components/checkout/AddressSelector";
+import type { NepalAddressFormHandle } from "@/components/checkout/NepalAddressForm";
 import { Input } from "@/components/ui/input";
 import type { User } from "@/contexts/AuthContext";
 import { useCountryStates } from "@/hooks/useCountryStates";
+import type { NepalProvince } from "@/lib/data/nepal";
 import {
   type AddressFormData,
+  addressNeedsDistrict,
   addressToFormData,
   formDataToAddress,
+  type NepalAddress,
   updateAddressField,
 } from "@/lib/utils/address";
 
 interface AddressSectionProps {
   cart: Cart;
   countries: Country[];
+  provinces: NepalProvince[];
+  loadingProvinces?: boolean;
   savedAddresses: Address[];
   isAuthenticated: boolean;
   signInUrl: string;
@@ -41,36 +47,24 @@ interface AddressSectionProps {
   user?: User | null;
 }
 
-const REQUIRED_ADDRESS_FIELDS: (keyof AddressFormData)[] = [
-  "last_name",
-  "address1",
-  "city",
-  "postal_code",
-  "country_iso",
-  "phone",
-];
-
-function isAddressComplete(address: AddressFormData): boolean {
-  return REQUIRED_ADDRESS_FIELDS.every((field) => address[field].trim() !== "");
-}
-
-function buildAutoSaveHash(
-  email: string,
-  address: AddressFormData,
-  savedAddressId?: string,
-): string {
-  if (savedAddressId) {
-    return JSON.stringify({ email, shipping_address_id: savedAddressId });
-  }
-  return JSON.stringify({
-    email,
-    shipping_address: formDataToAddress(address),
-  });
+/** Nepal checkout completeness: name + phone + province + district + street + city. */
+function isNepalAddressComplete(address: AddressFormData): boolean {
+  return (
+    address.first_name.trim() !== "" &&
+    address.last_name.trim() !== "" &&
+    address.phone.trim() !== "" &&
+    address.province_id.trim() !== "" &&
+    address.district_id.trim() !== "" &&
+    address.address1.trim() !== "" &&
+    address.city.trim() !== ""
+  );
 }
 
 export function AddressSection({
   cart,
   countries,
+  provinces,
+  loadingProvinces,
   savedAddresses: initialSavedAddresses,
   isAuthenticated,
   signInUrl,
@@ -103,15 +97,12 @@ export function AddressSection({
   // `stale` — so keying off `isAuthenticated` alone would leave the field
   // disabled and blank, blocking checkout. Gate on the account email instead.
   const hasAccountEmail = isAuthenticated && !!user?.email;
-  const defaultCountryIso = countries[0]?.iso ?? "";
 
   const [shipAddress, setShipAddress] = useState<AddressFormData>(() => {
     if (initialSavedAddress) return addressToFormData(initialSavedAddress);
     const formData = addressToFormData(cart.shipping_address);
-    // Pre-fill country from the market's first country when empty
-    if (!formData.country_iso && defaultCountryIso) {
-      formData.country_iso = defaultCountryIso;
-    }
+    // Nepal checkout fixes the country — legacy states leave it blank.
+    formData.country_iso = "NP";
     // Pre-fill name from user profile when address has no name yet
     if (!formData.first_name && user?.first_name) {
       formData.first_name = user.first_name;
@@ -132,10 +123,29 @@ export function AddressSection({
     fetchStates,
   );
 
+  const nepalFormRef = useRef<NepalAddressFormHandle>(null);
   const lastSavedRef = useRef<string>("");
   const mountAutoSaveFiredRef = useRef(false);
   const processingRef = useRef(processing);
   processingRef.current = processing;
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
+
+  const buildHash = useCallback(
+    (emailValue: string, address: AddressFormData, savedAddrId?: string) => {
+      if (savedAddrId) {
+        return JSON.stringify({
+          email: emailValue,
+          shipping_address_id: savedAddrId,
+        });
+      }
+      return JSON.stringify({
+        email: emailValue,
+        shipping_address: formDataToAddress(address),
+      });
+    },
+    [],
+  );
 
   const tryAutoSave = useCallback(
     async (
@@ -146,40 +156,74 @@ export function AddressSection({
       if (!currentEmail.trim()) return;
       if (processingRef.current) return;
 
+      // Saved-address selection: link by id when the district is unchanged,
+      // so no duplicate address is created. When the district CHANGES, send
+      // the full address data instead — only the data path reverts the cart
+      // to the address step and re-estimates delivery rates for the new
+      // district (the id path leaves stale rates behind).
       if (savedAddrId) {
-        const hash = buildAutoSaveHash(
-          currentEmail,
-          currentAddress,
-          savedAddrId,
-        );
-        if (hash === lastSavedRef.current) return;
-        try {
-          await onAutoSave({
-            email: currentEmail,
-            shipping_address_id: savedAddrId,
-          });
-          lastSavedRef.current = hash;
-        } catch {
-          // Allow retry on next blur
+        const record = savedAddresses.find((a) => a.id === savedAddrId) as
+          | NepalAddress
+          | undefined;
+        const cartDistrict = (
+          cartRef.current?.shipping_address as NepalAddress | null
+        )?.district_id;
+        const recordNeedsReestimate =
+          !record?.district_id || record.district_id !== cartDistrict;
+
+        if (!recordNeedsReestimate) {
+          const hash = buildHash(currentEmail, currentAddress, savedAddrId);
+          if (hash === lastSavedRef.current) return;
+          try {
+            await onAutoSave({
+              email: currentEmail,
+              shipping_address_id: savedAddrId,
+            });
+            lastSavedRef.current = hash;
+          } catch {
+            // Allow retry on next blur
+          }
+          return;
         }
-        return;
+
+        // District changed (or first address): fall through and save the
+        // record's full data so rates re-estimate.
+        if (record) {
+          const fullData = addressToFormData(record);
+          fullData.country_iso = "NP";
+          const hash = buildHash(currentEmail, fullData);
+          if (hash === lastSavedRef.current) return;
+          try {
+            await onAutoSave({
+              email: currentEmail,
+              shipping_address: formDataToAddress(fullData),
+            });
+            lastSavedRef.current = hash;
+          } catch {
+            // Allow retry on next blur
+          }
+          return;
+        }
       }
 
-      if (!isAddressComplete(currentAddress)) return;
+      // Manual form: validate through the Nepal form (inline errors shown)
+      // and save only when fully valid.
+      const params = await nepalFormRef.current?.getValidParams();
+      if (!params) return;
 
-      const hash = buildAutoSaveHash(currentEmail, currentAddress);
+      const hash = buildHash(currentEmail, currentAddress);
       if (hash === lastSavedRef.current) return;
       try {
         await onAutoSave({
           email: currentEmail,
-          shipping_address: formDataToAddress(currentAddress),
+          shipping_address: params,
         });
         lastSavedRef.current = hash;
       } catch {
         // Allow retry on next blur
       }
     },
-    [onAutoSave],
+    [onAutoSave, savedAddresses, buildHash],
   );
 
   // Auto-save the pre-selected saved address on mount
@@ -193,6 +237,7 @@ export function AddressSection({
       addressToFormData(initialSavedAddress),
       initialSavedAddress.id,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSavedAddress, email, tryAutoSave]);
 
   const updateShipAddress = (field: keyof AddressFormData, value: string) => {
@@ -203,6 +248,9 @@ export function AddressSection({
   };
 
   const handleFieldBlur = () => {
+    // Skip when a saved address is linked — its data is already on the order
+    // (selecting it autosaved immediately).
+    if (selectedSavedAddressId) return;
     tryAutoSave(email, shipAddress, selectedSavedAddressId);
   };
 
@@ -216,7 +264,7 @@ export function AddressSection({
   const handleEmailBlur = () => {
     // If address is complete, tryAutoSave sends email + address in one call.
     // Only call onEmailBlur (email-only save) when address is incomplete.
-    if (isAddressComplete(shipAddress) || selectedSavedAddressId) {
+    if (isNepalAddressComplete(shipAddress) || selectedSavedAddressId) {
       tryAutoSave(email, shipAddress, selectedSavedAddressId);
     } else {
       onEmailBlur(email);
@@ -245,6 +293,13 @@ export function AddressSection({
     );
     handleSelectSavedAddress(updatedAddress);
   };
+
+  // Warn when the linked address still needs a district (legacy addresses).
+  const linkedNeedsDistrict =
+    !!selectedSavedAddressId &&
+    addressNeedsDistrict(
+      savedAddresses.find((a) => a.id === selectedSavedAddressId),
+    );
 
   return (
     <>
@@ -304,6 +359,11 @@ export function AddressSection({
             </span>
           )}
         </div>
+        {linkedNeedsDistrict && (
+          <p className="rounded-sm border border-amber-300 bg-amber-50 px-4 py-2.5 mb-3 text-sm text-amber-800">
+            {t("selectDistrictPrompt")}
+          </p>
+        )}
         {isAuthenticated && savedAddresses.length > 0 ? (
           <AddressSelector
             savedAddresses={savedAddresses}
@@ -311,6 +371,9 @@ export function AddressSection({
             countries={countries}
             states={shipStates}
             loadingStates={isPendingShip}
+            provinces={provinces}
+            loadingProvinces={loadingProvinces}
+            nepalFormRef={nepalFormRef}
             onChange={updateShipAddress}
             onSelectSavedAddress={handleSelectSavedAddress}
             onEditAddress={
@@ -331,6 +394,10 @@ export function AddressSection({
               loadingStates={isPendingShip}
               onChange={updateShipAddress}
               idPrefix="ship"
+              nepalProvinces={provinces}
+              loadingNepalProvinces={loadingProvinces}
+              nepalFormRef={nepalFormRef}
+              onNepalBlur={handleFieldBlur}
             />
           </div>
         )}
@@ -341,6 +408,7 @@ export function AddressSection({
         <AddressEditModal
           address={editingAddress}
           countries={countries}
+          provinces={provinces}
           fetchStates={fetchStates}
           onSave={handleSaveEditedAddress}
           onClose={() => setEditingAddress(null)}

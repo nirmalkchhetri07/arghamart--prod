@@ -2,12 +2,22 @@
 
 import type { Country, State } from "@spree/sdk";
 import { useTranslations } from "next-intl";
+import type { Ref } from "react";
+import {
+  NepalAddressForm,
+  type NepalAddressFormHandle,
+} from "@/components/checkout/NepalAddressForm";
 import { Input } from "@/components/ui/input";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import type { AddressFormData } from "@/lib/utils/address";
+import type { NepalProvince } from "@/lib/data/nepal";
+import { type AddressFormData, addressFullName } from "@/lib/utils/address";
+import {
+  type NepalAddressFormValues,
+  splitFullName,
+} from "@/lib/validation/nepal-address";
 
 interface AddressFormFieldsProps {
   address: AddressFormData;
@@ -16,6 +26,16 @@ interface AddressFormFieldsProps {
   loadingStates: boolean;
   onChange: (field: keyof AddressFormData, value: string) => void;
   idPrefix: string;
+  /**
+   * When provided, the generic country/state fields are replaced by the
+   * Nepal-specific form (fixed NP country, province + district comboboxes,
+   * react-hook-form + zod validation). Billing and other generic flows omit
+   * this and keep the classic fields.
+   */
+  nepalProvinces?: NepalProvince[];
+  loadingNepalProvinces?: boolean;
+  nepalFormRef?: Ref<NepalAddressFormHandle>;
+  onNepalBlur?: () => void;
 }
 
 export function AddressFormFields({
@@ -25,9 +45,56 @@ export function AddressFormFields({
   loadingStates,
   onChange,
   idPrefix,
+  nepalProvinces,
+  loadingNepalProvinces,
+  nepalFormRef,
+  onNepalBlur,
 }: AddressFormFieldsProps) {
   const t = useTranslations("address");
   const tc = useTranslations("common");
+
+  if (nepalProvinces) {
+    const handleNepalChange = (values: NepalAddressFormValues) => {
+      // Bridge RHF values into the controlled AddressFormData fields the
+      // parent autosave machinery works with.
+      const { first_name, last_name } = splitFullName(values.fullName);
+      const mapping: [keyof AddressFormData, string][] = [
+        ["first_name", first_name],
+        ["last_name", last_name],
+        ["phone", values.phone],
+        ["province_id", values.provinceId],
+        ["district_id", values.districtId],
+        ["address1", values.address1],
+        ["city", values.city],
+        ["postal_code", values.postalCode ?? ""],
+        ["country_iso", "NP"],
+      ];
+      for (const [field, value] of mapping) {
+        if (address[field] !== value) onChange(field, value);
+      }
+    };
+
+    return (
+      <NepalAddressForm
+        ref={nepalFormRef}
+        provinces={nepalProvinces}
+        loadingProvinces={loadingNepalProvinces}
+        defaultValues={{
+          fullName: addressFullName(address),
+          phone: address.phone,
+          provinceId: address.province_id,
+          districtId: address.district_id,
+          address1: address.address1,
+          city: address.city,
+          postalCode: address.postal_code,
+        }}
+        onChange={handleNepalChange}
+        onFieldBlur={onNepalBlur}
+        idPrefix={idPrefix}
+      />
+    );
+  }
+
   const hasStates = states.length > 0;
 
   return (
