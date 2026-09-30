@@ -55,7 +55,9 @@ Rails.application.configure do
   config.cache_store = :memory_store
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Set ACTIVE_STORAGE_SERVICE=cloudflare in backend/.env to exercise the same
+  # Cloudflare R2 setup production uses (verify it with `bin/rails storage:check`).
+  config.active_storage.service = ENV.fetch("ACTIVE_STORAGE_SERVICE", "local").to_sym
 
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
