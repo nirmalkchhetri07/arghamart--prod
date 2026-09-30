@@ -101,6 +101,24 @@ RSpec.describe 'Store API Manual QR proofs', type: :request do
       expect(stored.proof_image).to be_attached
     end
 
+    it 'returns a 503 storage_error when the object store rejects the upload' do
+      session = create_qr_session
+      # Simulate Cloudflare R2 refusing the write (NoSuchBucket, AccessDenied,
+      # network failure, …) — the customer must get a retryable JSON error,
+      # not an unhandled 500 with a generic body.
+      allow_any_instance_of(ActiveStorage::Service::DiskService)
+        .to receive(:upload).and_raise(Errno::EACCES)
+
+      upload_qr_proof(session['id'])
+
+      expect(response).to have_http_status(:service_unavailable)
+      expect(json_response['error']['code']).to eq('storage_error')
+      expect(json_response['error']['message']).to include('could not be saved')
+      expect(json_response['error']['details']['reason']).to eq('Errno::EACCES')
+      expect(Spree::PaymentSessions::ManualQr.find_by!(external_id: session['external_id']).proof_image)
+        .not_to be_attached
+    end
+
     it 'completes the flow: upload → complete leaves payment pending with proof' do
       session = create_qr_session
       upload_qr_proof(session['id'])
@@ -237,6 +255,23 @@ RSpec.describe 'Store API Manual QR proofs', type: :request do
            headers: order_multipart_headers(completed_order.token)
 
       expect(response).to have_http_status(:unprocessable_content)
+    end
+
+    it 'returns a 503 storage_error and drops the fresh session when storage fails' do
+      allow_any_instance_of(ActiveStorage::Service::DiskService)
+        .to receive(:upload).and_raise(Errno::EACCES)
+
+      expect do
+        post "/api/v3/store/orders/#{completed_order.prefixed_id}/manual_qr_proof",
+             params: { proof_image: proof_file, transaction_id: 'TXN-FAIL' },
+             headers: order_multipart_headers(completed_order.token)
+      end.not_to change { Spree::PaymentSessions::ManualQr.count }
+
+      expect(response).to have_http_status(:service_unavailable)
+      expect(json_response['error']['code']).to eq('storage_error')
+      expect(json_response['error']['details']['reason']).to eq('Errno::EACCES')
+      # No payment was left behind either — the customer can simply retry.
+      expect(completed_order.payments.where(qr_transaction_id: 'TXN-FAIL')).not_to exist
     end
 
     it 'redirects the owner to the proof image' do

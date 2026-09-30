@@ -15,8 +15,11 @@ en:
       manual_qr:
         approved: "QR payment approved and completed."
         cannot_approve: "Only a pending Manual QR payment can be approved."
+        approve_failed: "Could not approve this payment: %{error}"
         rejected: "QR payment rejected."
         cannot_reject: "Only a pending Manual QR payment can be rejected."
+        reject_failed: "Could not reject this payment: %{error}"
+        image_upload_failed: "The QR image could not be stored: %{error}"
     qr_proof: "Payment screenshot"
     qr_transaction_id: "Customer transaction ID"
     qr_status: "Verification"

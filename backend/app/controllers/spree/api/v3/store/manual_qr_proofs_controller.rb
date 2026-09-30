@@ -20,6 +20,8 @@ module Spree
         # store, then CanCanCan `:show` with the order token (guests) or the
         # customer JWT (signed-in users).
         class ManualQrProofsController < Store::BaseController
+          include Spree::Api::V3::Store::ManualQrStorageErrors
+
           before_action :find_order!
           before_action :find_payment!, only: [:show]
 
@@ -44,7 +46,18 @@ module Spree
             return render_error(code: 'invalid_proof', message: error, status: :unprocessable_content) if error
 
             session = method.create_payment_session(order: @order)
-            session.proof_image.attach(proof)
+            # attach uploads to the object store (Cloudflare R2 in production);
+            # a failure there must not leave an orphaned session behind nor
+            # surface as an unhandled 500 with a generic body.
+            begin
+              session.proof_image.attach(proof)
+            rescue ActiveRecord::RecordInvalid => e
+              discard_payment_session(session)
+              return render_errors(e.record.errors)
+            rescue StandardError => e
+              discard_payment_session(session)
+              return render_storage_error(e)
+            end
 
             unless session.save
               return render_errors(session.errors)
@@ -75,6 +88,16 @@ module Spree
           end
 
           private
+
+          # Best-effort rollback of a session whose screenshot never made it to
+          # storage, so a failed upload cannot strand a pending session.
+          def discard_payment_session(session)
+            session.destroy if session.persisted?
+          rescue StandardError => e
+            Rails.logger.warn(
+              "[manual_qr] could not discard payment session #{session.id}: #{e.class}: #{e.message}"
+            )
+          end
 
           def find_order!
             # Member routes expose the order id as :id (reupload) or :order_id

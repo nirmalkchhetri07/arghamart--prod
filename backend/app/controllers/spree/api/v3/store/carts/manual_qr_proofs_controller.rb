@@ -16,6 +16,7 @@ module Spree
           # again by the model validations as a backstop.
           class ManualQrProofsController < Store::BaseController
             include Spree::Api::V3::CartResolvable
+            include Spree::Api::V3::Store::ManualQrStorageErrors
 
             before_action :find_cart!
             before_action :set_payment_session
@@ -43,8 +44,21 @@ module Spree
                 )
               end
 
-              @payment_session.proof_image.purge if @payment_session.proof_image.attached?
-              @payment_session.proof_image.attach(proof)
+              # purge + attach hit the object store (Cloudflare R2 in
+              # production) — an R2 rejection would otherwise bubble up as an
+              # unhandled 500 with a generic body. Active Storage commits the
+              # attachment row first and uploads in an after_commit callback,
+              # so a failure also has to be undone: drop the row that points
+              # at a file which never landed in the bucket.
+              begin
+                @payment_session.proof_image.purge if @payment_session.proof_image.attached?
+                @payment_session.proof_image.attach(proof)
+              rescue ActiveRecord::RecordInvalid => e
+                return render_errors(e.record.errors)
+              rescue StandardError => e
+                discard_failed_proof_upload
+                return render_storage_error(e)
+              end
 
               unless @payment_session.save
                 return render_errors(@payment_session.errors)
@@ -64,6 +78,18 @@ module Spree
             def set_payment_session
               @payment_session = @cart.payment_sessions.find_by_prefix_id(params[:id]) ||
                                  @cart.payment_sessions.find_by!(external_id: params[:id])
+            end
+
+            # Active Storage commits the attachment row first and uploads in an
+            # after_commit callback, so a rejected upload leaves `attached?`
+            # true with no file behind it. Best-effort removal keeps the retry
+            # clean and stops the storefront from linking to a missing proof.
+            def discard_failed_proof_upload
+              @payment_session.proof_image.purge if @payment_session.proof_image.attached?
+            rescue StandardError => e
+              Rails.logger.warn(
+                "[manual_qr] could not discard failed proof upload: #{e.class}: #{e.message}"
+              )
             end
 
             def proof_error(proof)

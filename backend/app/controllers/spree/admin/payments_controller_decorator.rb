@@ -10,8 +10,12 @@ module Spree
     module PaymentsControllerDecorator
       def approve
         if @payment.pending? && @payment.manual_qr?
-          @payment.complete!
-          flash[:success] = Spree.t('admin.manual_qr.approved')
+          begin
+            @payment.complete!
+            flash[:success] = Spree.t('admin.manual_qr.approved')
+          rescue StandardError => e
+            flash[:error] = qr_review_failure('approve_failed', e)
+          end
         else
           flash[:error] = Spree.t('admin.manual_qr.cannot_approve')
         end
@@ -20,9 +24,13 @@ module Spree
 
       def reject
         if @payment.pending? && @payment.manual_qr?
-          @payment.update!(qr_rejection_reason: params.dig(:payment, :qr_rejection_reason).presence)
-          @payment.void!
-          flash[:success] = Spree.t('admin.manual_qr.rejected')
+          begin
+            @payment.update!(qr_rejection_reason: params.dig(:payment, :qr_rejection_reason).presence)
+            @payment.void!
+            flash[:success] = Spree.t('admin.manual_qr.rejected')
+          rescue StandardError => e
+            flash[:error] = qr_review_failure('reject_failed', e)
+          end
         else
           flash[:error] = Spree.t('admin.manual_qr.cannot_reject')
         end
@@ -44,6 +52,22 @@ module Spree
       end
 
       private
+
+      # A failed Approve/Reject (validation, state transition, storage, …) is
+      # reported in full to the log/Sentry and returned as the flash message,
+      # so the admin sees *why* instead of a silent redirect or a bare 500.
+      def qr_review_failure(key, exception)
+        Rails.error.report(
+          exception,
+          context: { payment_id: @payment&.id, order_id: @payment&.order_id, request_id: request.request_id },
+          source: 'manual_qr.admin_review'
+        )
+        Rails.logger.error(
+          "[manual_qr] admin #{key.tr('_', ' ')} failed (#{request.request_id}): " \
+          "#{exception.class}: #{exception.message}"
+        )
+        Spree.t("admin.manual_qr.#{key}", error: exception.message)
+      end
 
       # Disk-service URL generation needs explicit host options (S3/R2 ignore
       # them and presign from the service config instead).

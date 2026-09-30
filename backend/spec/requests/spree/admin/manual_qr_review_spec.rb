@@ -84,6 +84,36 @@ RSpec.describe 'Admin Manual QR review', type: :request do
     expect(flash[:error]).to be_present
   end
 
+  # A failure inside the state transition (storage, validation, webhook, …)
+  # must land in the flash with its reason — otherwise the admin is bounced
+  # back to the order page with no explanation (or a bare 500).
+  it 'shows why Approve failed instead of failing silently' do
+    payment = pending_qr_payment
+    allow_any_instance_of(Spree::Payment).to receive(:complete!)
+      .and_raise(RuntimeError, 'R2 unreachable while completing the payment')
+
+    put "/admin/orders/#{order.to_param}/payments/#{payment.to_param}/approve"
+
+    expect(response).to have_http_status(:redirect)
+    expect(payment.reload).to be_pending
+    expect(flash[:error]).to include('Could not approve this payment')
+    expect(flash[:error]).to include('R2 unreachable while completing the payment')
+  end
+
+  it 'shows why Reject failed instead of failing silently' do
+    payment = pending_qr_payment
+    allow_any_instance_of(Spree::Payment).to receive(:void!)
+      .and_raise(RuntimeError, 'R2 unreachable while voiding the payment')
+
+    put "/admin/orders/#{order.to_param}/payments/#{payment.to_param}/reject",
+        params: { payment: { qr_rejection_reason: 'Amount does not match.' } }
+
+    expect(response).to have_http_status(:redirect)
+    expect(payment.reload).to be_pending
+    expect(flash[:error]).to include('Could not reject this payment')
+    expect(flash[:error]).to include('R2 unreachable while voiding the payment')
+  end
+
   it 'serves the proof image to admins' do
     payment = pending_qr_payment
 
