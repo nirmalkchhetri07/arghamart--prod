@@ -7,3 +7,6 @@ node_modules/
 .vercel
 .env*
 !.env.production.example
+
+# local db dumps from scripts/backup_db.sh (R2 is the source of truth)
+/backups/
