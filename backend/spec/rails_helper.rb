@@ -39,6 +39,16 @@ rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
 RSpec.configure do |config|
+  # Devise installs its warden session (de)serializers inside
+  # ActionDispatch::Routing::RouteSet#finalize!, and Rails only finalizes
+  # routes lazily — during the first request. Until that happens, `login_as`
+  # stores the raw user object in the session (warden's default), and the next
+  # request of the same example then dies in
+  # `Devise::Models::Authenticatable.serialize_from_session` with
+  # "wrong number of arguments". Finalizing up front makes the first example
+  # in a run behave like every other one.
+  config.before(:suite) { Rails.application.routes.finalize! }
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
     Rails.root.join('spec/fixtures')
