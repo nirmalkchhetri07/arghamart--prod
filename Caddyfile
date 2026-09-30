@@ -1,0 +1,3 @@
+api.arghahub.tech {
+  reverse_proxy web:3000
+}
