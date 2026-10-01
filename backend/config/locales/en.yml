@@ -48,6 +48,16 @@ en:
         fee_not_set: "fee not set"
         default_fee_updated: "Default shipping fee updated."
         no_district_calculator: "No Nepal Delivery shipping method found."
+      orders:
+        # Phone lookup on the New Order form (see OrdersControllerDecorator):
+        # phone numbers identify customers more reliably than email in Nepal.
+        find_by_phone: "Provide a phone number"
+        find_by_phone_hint: "Looks up the customer account by phone — more reliable than email in Nepal."
+        no_customer_found_redirect: "No customer found with phone %{phone} — enter their details to create the account."
+      users:
+        # Email is optional on admin-created customers and stays blank when
+        # omitted (see Spree::User#email_required?).
+        email_optional_help: "Optional — may be left blank. The phone number identifies the customer."
     qr_proof: "Payment screenshot"
     qr_transaction_id: "Customer transaction ID"
     qr_status: "Verification"

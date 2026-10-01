@@ -1,0 +1,22 @@
+<%# Override of spree_admin orders/_form (New Order). Adds a phone lookup
+    below the email field: the controller resolves it to a customer account
+    (see OrdersControllerDecorator), which is more reliable than email in
+    Nepal. %>
+<%= f.spree_select :currency, options_for_select(supported_currency_options, current_store.default_currency), { label: Spree.t(:currency), autocomplete: true } %>
+
+<hr class="my-4" />
+
+<div class="form-group">
+  <%= f.label :user_id, Spree.t(:select_user) %>
+  <%= tom_select_tag 'order[user_id]', { include_blank: Spree.t(:select_user), options: users_for_select_options } %>
+</div>
+
+<p class="text-center text-gray-600 my-0"><%= Spree.t(:or) %></p>
+
+<%= f.spree_email_field :email, autofocus: f.object.new_record?, label: Spree.t('admin.orders.provide_email') %>
+
+<div class="form-group">
+  <%= label_tag 'order[phone]', Spree.t('admin.orders.find_by_phone') %>
+  <%= telephone_field_tag 'order[phone]', params.dig(:order, :phone), class: 'form-input', placeholder: '98XXXXXXXX', autocomplete: 'tel' %>
+  <small class="form-text text-muted"><%= Spree.t('admin.orders.find_by_phone_hint') %></small>
+</div>
