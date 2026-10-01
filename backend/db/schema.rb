@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_000007) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_000008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -891,6 +891,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000007) do
     t.index ["user_id"], name: "index_spree_newsletter_subscribers_on_user_id"
     t.index ["verification_token"], name: "index_spree_newsletter_subscribers_on_verification_token", unique: true
     t.index ["verified_at"], name: "index_spree_newsletter_subscribers_on_verified_at"
+  end
+
+  create_table "spree_oauth_identities", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["provider", "uid"], name: "index_oauth_identities_on_provider_and_uid", unique: true
+    t.index ["user_id"], name: "index_oauth_identities_on_user_id"
+  end
+
+  create_table "spree_oauth_providers", force: :cascade do |t|
+    t.string "client_id"
+    t.string "client_secret"
+    t.datetime "created_at", null: false
+    t.boolean "enabled", default: false, null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.string "provider", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider"], name: "index_spree_oauth_providers_on_provider", unique: true
   end
 
   create_table "spree_option_type_prototypes", force: :cascade do |t|
@@ -2464,6 +2487,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000007) do
   add_foreign_key "spree_addresses", "spree_districts", column: "district_id"
   add_foreign_key "spree_addresses", "spree_provinces", column: "province_id"
   add_foreign_key "spree_districts", "spree_provinces", column: "province_id"
+  add_foreign_key "spree_oauth_identities", "spree_users", column: "user_id"
   add_foreign_key "spree_option_type_translations", "spree_option_types"
   add_foreign_key "spree_option_value_translations", "spree_option_values"
   add_foreign_key "spree_payment_sources", "spree_payment_methods", column: "payment_method_id"

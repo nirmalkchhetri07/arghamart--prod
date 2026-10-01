@@ -1,0 +1,49 @@
+<%# /admin/social-login — OAuth providers for storefront sign-in. %>
+<% content_for(:page_title) do %>
+  <%= Spree.t('admin.oauth.title') %>
+<% end %>
+
+<% content_for :page_actions do %>
+  <%= link_to Spree.t('admin.oauth.add_provider'), spree.new_admin_oauth_provider_path, class: "btn btn-sm btn-primary" %>
+<% end %>
+
+<div class="card">
+  <div class="card-body p-0">
+    <% if @providers.any? %>
+      <% @providers.each do |provider| %>
+        <div class="flex items-center justify-between gap-2 border-b px-4 py-3 last:border-b-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <strong class="text-sm text-gray-900"><%= provider.name %></strong>
+            <small class="text-gray-500"><%= provider.provider %></small>
+            <% if provider.enabled? %>
+              <span class="badge badge-active"><%= Spree.t(:enabled) %></span>
+            <% else %>
+              <span class="badge badge-inactive"><%= Spree.t(:disabled) %></span>
+            <% end %>
+            <% if provider.client_id.present? %>
+              <small class="text-gray-500">
+                <%= Spree.t('admin.oauth.client_id') %>:
+                <%= "#{provider.client_id[0, 6]}…#{provider.client_id[-4..]}" %>
+              </small>
+            <% end %>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <%= link_to Spree.t(provider.enabled? ? :disable : :enable),
+                  spree.toggle_admin_oauth_provider_path(provider),
+                  class: "btn btn-sm btn-light",
+                  data: { turbo_method: :post, turbo_frame: "_top" } %>
+            <%= link_to Spree.t(:edit), spree.edit_admin_oauth_provider_path(provider),
+                  class: "btn btn-sm btn-light" %>
+            <%= link_to Spree.t(:delete), spree.admin_oauth_provider_path(provider),
+                  class: "btn btn-sm btn-light",
+                  data: { turbo_method: :delete, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: "_top" } %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="px-4 py-6 text-sm text-gray-500 text-center">
+        <%= Spree.t('admin.oauth.none_yet') %>
+      </p>
+    <% end %>
+  </div>
+</div>

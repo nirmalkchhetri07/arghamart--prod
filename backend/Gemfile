@@ -77,6 +77,10 @@ gem 'turbo-rails'
 # on the database unless MEILISEARCH_URL is set
 gem 'meilisearch', '>= 0.28'
 
+# Social login — Google ID-token verification for Store API OAuth login
+# (see Spree::Oauth::GoogleVerifier).
+gem 'googleauth', '>= 1.11'
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem 'tzinfo-data', platforms: %i[windows jruby]
 

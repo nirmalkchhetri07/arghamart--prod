@@ -64,6 +64,15 @@ Rails.application.routes.draw do
           post :update
         end
       end
+
+      # Social Login providers (see Spree::Admin::OauthProvidersController).
+      # Custom pages, additive only — no gem routes reopened or removed.
+      get 'social-login', to: 'oauth_providers#index', as: :social_login
+      resources :oauth_providers, only: %i[new create edit update destroy] do
+        member do
+          post :toggle
+        end
+      end
     end
 
     namespace :api do
@@ -89,6 +98,12 @@ Rails.application.routes.draw do
               end
             end
           end
+          # Social Login (see Spree::Api::V3::Store::OauthProvidersController
+          # and ::OauthController). The :provider constraint keeps this from
+          # ever shadowing the stock auth/login|refresh|logout routes.
+          resources :oauth_providers, only: %i[index]
+          post 'auth/:provider', to: 'oauth#create',
+                                 constraints: { provider: %r{(?!login|refresh|logout)[a-z_]+} }
         end
       end
     end

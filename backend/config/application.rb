@@ -22,6 +22,27 @@ Bundler.require(*Rails.groups)
 
 module SpreeStarter
   class Application < Rails::Application
+    # Active Record Encryption keys (OAuth client secrets use `encrypts`).
+    # Set here — not in an initializer — because ActiveRecord copies this
+    # config before app initializers run. Derived from secret_key_base so no
+    # credentials files or extra env vars are needed; keys rotate only if
+    # SECRET_KEY_BASE changes. Test env uses fixed disposable keys.
+    if Rails.env.test?
+      config.active_record.encryption.primary_key = 'test-oauth-primary-key-000000000'
+      config.active_record.encryption.deterministic_key = 'test-oauth-deterministic-0000000'
+      config.active_record.encryption.key_derivation_salt = 'test-oauth-salt-0000000000000000'
+    else
+      config.after_initialize do
+        generator = Rails.application.key_generator
+        ActiveRecord::Encryption.config.primary_key =
+          generator.generate_key('arghamart active record encryption primary', 32)
+        ActiveRecord::Encryption.config.deterministic_key =
+          generator.generate_key('arghamart active record encryption deterministic', 32)
+        ActiveRecord::Encryption.config.key_derivation_salt =
+          generator.generate_key('arghamart active record encryption salt', 32)
+      end
+    end
+
     config.to_prepare do
       # Load application's model / class decorators
       Dir.glob(File.join(File.dirname(__FILE__), '../app/**/*_decorator*.rb')) do |c|

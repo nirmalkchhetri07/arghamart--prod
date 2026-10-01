@@ -117,6 +117,13 @@ Rails.application.config.after_initialize do
                    position: 86,
                    active: -> { controller_name == 'district_fees' },
                    if: -> { can?(:manage, Spree::District) }
+  settings_nav.add :social_login,
+                   label: 'admin.oauth.title',
+                   url: :admin_social_login_path,
+                   icon: 'key',
+                   position: 87,
+                   active: -> { controller_name == 'oauth_providers' },
+                   if: -> { can?(:manage, Spree::OauthProvider) }
 end
 
 Spree.user_class = 'Spree::User'

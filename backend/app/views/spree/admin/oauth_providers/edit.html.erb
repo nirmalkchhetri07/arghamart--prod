@@ -1,0 +1,11 @@
+<% content_for(:page_title) do %>
+  <%= @provider.name %>
+<% end %>
+
+<%= form_with model: [:admin, @provider], url: spree.admin_oauth_provider_path(@provider), method: :patch, class: "flex flex-col gap-4" do |f| %>
+  <%= render 'spree/admin/shared/error_messages', target: @provider %>
+  <%= render 'form', f: f %>
+  <div>
+    <%= f.submit Spree.t(:update), class: "btn btn-sm btn-primary" %>
+  </div>
+<% end %>
