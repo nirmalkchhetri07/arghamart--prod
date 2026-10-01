@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -229,6 +229,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_000001) do
     t.bigint "country_id"
     t.datetime "created_at", null: false
     t.datetime "deleted_at", precision: nil
+    t.bigint "district_id"
     t.string "firstname"
     t.string "label"
     t.string "lastname"
@@ -236,6 +237,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_000001) do
     t.decimal "longitude"
     t.string "phone"
     t.jsonb "private_metadata"
+    t.bigint "province_id"
     t.jsonb "public_metadata"
     t.boolean "quick_checkout", default: false
     t.bigint "state_id"
@@ -245,8 +247,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_000001) do
     t.string "zipcode"
     t.index ["country_id"], name: "index_spree_addresses_on_country_id"
     t.index ["deleted_at"], name: "index_spree_addresses_on_deleted_at"
+    t.index ["district_id"], name: "index_spree_addresses_on_district_id"
     t.index ["firstname"], name: "index_addresses_on_firstname"
     t.index ["lastname"], name: "index_addresses_on_lastname"
+    t.index ["province_id"], name: "index_spree_addresses_on_province_id"
     t.index ["quick_checkout"], name: "index_spree_addresses_on_quick_checkout"
     t.index ["state_id"], name: "index_spree_addresses_on_state_id"
     t.index ["user_id"], name: "index_spree_addresses_on_user_id"
@@ -562,6 +566,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_000001) do
     t.datetime "updated_at", precision: nil, null: false
     t.bigint "variant_id"
     t.index ["variant_id"], name: "index_spree_digitals_on_variant_id"
+  end
+
+  create_table "spree_districts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "province_id", null: false
+    t.decimal "shipping_fee", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_spree_districts_on_active"
+    t.index ["province_id", "name"], name: "index_spree_districts_on_province_id_and_name", unique: true
+    t.index ["province_id"], name: "index_spree_districts_on_province_id"
   end
 
   create_table "spree_exports", force: :cascade do |t|
@@ -1537,6 +1553,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_000001) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "spree_provinces", force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_spree_provinces_on_code", unique: true
+    t.index ["name"], name: "index_spree_provinces_on_name", unique: true
+  end
+
   create_table "spree_refresh_tokens", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "expires_at", null: false
@@ -2419,6 +2445,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_000001) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "spree_addresses", "spree_districts", column: "district_id"
+  add_foreign_key "spree_addresses", "spree_provinces", column: "province_id"
+  add_foreign_key "spree_districts", "spree_provinces", column: "province_id"
   add_foreign_key "spree_option_type_translations", "spree_option_types"
   add_foreign_key "spree_option_value_translations", "spree_option_values"
   add_foreign_key "spree_payment_sources", "spree_payment_methods", column: "payment_method_id"

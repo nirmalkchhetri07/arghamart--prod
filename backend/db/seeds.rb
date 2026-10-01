@@ -9,3 +9,7 @@
 #   end
 
 Spree::Core::Engine.load_seed if defined?(Spree::Core)
+
+# Nepal delivery geography (7 provinces, 77 districts). Idempotent — safe to
+# re-run on every deploy. Fees default to 0 until configured in /admin/manage-fee.
+Spree::NepalGeography.seed! if defined?(Spree::NepalGeography)

@@ -1,0 +1,86 @@
+<%# Override of spree_admin's shared address card — used by the admin order
+    Shipping/Billing Address block and by the customer profile addresses.
+
+    The stock partial renders locality as city / state / zip / country. On
+    Nepal addresses state and zip are blank, so the District and Province
+    added by AddProvinceAndDistrictToSpreeAddresses never showed up and the
+    card read as a bare street line. Nepal addresses now render a labelled
+    block with the full format; every other address keeps the gem markup
+    verbatim. %>
+<% cache spree_base_cache_scope.call(address) do %>
+  <div class="address vcard">
+    <% if address.full_name.present? %>
+      <div class="fn"><%= address.full_name %></div>
+    <% end %>
+    <% unless address.company.blank? %>
+      <div class="org">
+        <%= address.company %>
+      </div>
+    <% end %>
+    <div class="adr">
+      <div class="street-address">
+        <div class="street-address-line">
+          <%= address.address1 %>
+        </div>
+        <% unless address.address2.blank? %>
+          <div class="street-address-line">
+            <%= address.address2 %>
+          </div>
+        <% end %>
+      </div>
+      <% if address.province.present? || address.district.present? %>
+        <dl class="nepal-address">
+          <% if address.city.present? %>
+            <div class="nepal-address-row">
+              <dt><%= Spree.t('admin.nepal.city') %></dt>
+              <dd class="locality"><%= address.city %></dd>
+            </div>
+          <% end %>
+          <% if address.district.present? %>
+            <div class="nepal-address-row">
+              <dt><%= Spree.t('admin.nepal.district') %></dt>
+              <dd class="district"><%= address.district.name %></dd>
+            </div>
+          <% end %>
+          <% if address.province.present? %>
+            <div class="nepal-address-row">
+              <dt><%= Spree.t('admin.nepal.province') %></dt>
+              <dd class="province"><%= address.province.name %></dd>
+            </div>
+          <% end %>
+          <% if address.zipcode.present? %>
+            <div class="nepal-address-row">
+              <dt><%= Spree.t(:zipcode) %></dt>
+              <dd class="postal-code"><%= address.zipcode %></dd>
+            </div>
+          <% end %>
+          <% if address.country.present? %>
+            <div class="nepal-address-row">
+              <dt><%= Spree.t(:country) %></dt>
+              <dd class="country-name"><%= localized_country_name(address.country) %></dd>
+            </div>
+          <% end %>
+        </dl>
+      <% else %>
+        <div class="local">
+          <span class="locality"><%= address.city %></span>
+          <span class="region"><%= address.state_text %></span>
+          <span class="postal-code"><%= address.zipcode %></span>
+          <div class="country-name"><%= localized_country_name(address.country) if address.country %></div>
+        </div>
+      <% end %>
+    </div>
+    <% unless address.phone.blank? %>
+      <div class="tel">
+        <span class="type"><%= Spree.t(:phone) %></span>
+        <%= address.phone %>
+      </div>
+    <% end %>
+    <% unless address.alternative_phone.blank? %>
+      <div class="alternative-phone tel">
+        <span class="type"><%= Spree.t(:alternative_phone) %></span>
+        <%= address.alternative_phone %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

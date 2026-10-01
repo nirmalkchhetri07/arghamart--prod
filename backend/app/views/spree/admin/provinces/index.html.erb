@@ -1,0 +1,78 @@
+<%# /admin/manage-address — provinces with their districts (Part 3). %>
+<% content_for(:page_title) do %>
+  <%= Spree.t('admin.nepal.manage_address') %>
+<% end %>
+
+<div class="flex flex-col gap-4">
+  <% @provinces.each do |province| %>
+    <%= turbo_frame_tag dom_id(province), class: "card" do %>
+      <div class="card-header items-center justify-between">
+        <div class="flex items-center gap-2">
+          <strong><%= province.name %></strong>
+          <small class="text-gray-600">
+            <%= pluralize(province.districts.size, 'district') %>
+          </small>
+        </div>
+        <%# Rename the display name only — the 7 provinces are fixed. %>
+        <%= form_with model: province, url: spree.admin_province_path(province), method: :patch, class: "flex items-center gap-2" do |f| %>
+          <%= f.text_field :name, class: "form-control form-control-sm", aria_label: province.name, required: true %>
+          <%= f.submit Spree.t(:update), class: "btn btn-sm btn-light" %>
+        <% end %>
+      </div>
+
+      <div class="card-body p-0">
+        <% province.districts.sort_by(&:name).each do |district| %>
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-2.5 last:border-b-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-sm text-gray-900"><%= district.name %></span>
+              <% if district.active? %>
+                <span class="badge badge-active"><%= Spree.t(:active) %></span>
+              <% else %>
+                <span class="badge badge-inactive"><%= Spree.t(:inactive) %></span>
+              <% end %>
+              <% count = district.addresses.count %>
+              <% if count.positive? %>
+                <small class="text-gray-600"><%= pluralize(count, 'address') %></small>
+              <% end %>
+            </div>
+
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <%# Inline rename %>
+              <%= form_with model: district, url: spree.admin_district_path(district), method: :patch, class: "flex items-center gap-2" do |f| %>
+                <%= f.hidden_field :province_id %>
+                <%= f.text_field :name, value: district.name, class: "form-control form-control-sm", aria_label: district.name, required: true %>
+                <%= f.submit Spree.t(:update), class: "btn btn-sm btn-light" %>
+              <% end %>
+
+              <% if district.active? %>
+                <%= link_to Spree.t(:deactivate), spree.deactivate_admin_district_path(district),
+                      class: "btn btn-sm btn-light",
+                      data: { turbo_method: :post, turbo_frame: "_top" } %>
+              <% else %>
+                <%= link_to Spree.t(:activate), spree.activate_admin_district_path(district),
+                      class: "btn btn-sm btn-light",
+                      data: { turbo_method: :post, turbo_frame: "_top" } %>
+              <% end %>
+
+              <%= link_to Spree.t(:delete), spree.admin_district_path(district),
+                    class: "btn btn-sm btn-light",
+                    data: { turbo_method: :delete, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: "_top" } %>
+            </div>
+          </div>
+        <% end %>
+
+        <%# Add a district to this province %>
+        <div class="border-t bg-gray-25 px-4 py-3">
+          <%= form_with model: Spree::District.new(province: province),
+                url: spree.admin_districts_path, class: "flex items-center gap-2" do |f| %>
+            <%= f.hidden_field :province_id %>
+            <%= f.text_field :name, class: "form-control form-control-sm",
+                  placeholder: Spree.t('admin.nepal.district_name_placeholder'),
+                  aria_label: Spree.t('admin.nepal.district_name_placeholder'), required: true %>
+            <%= f.submit Spree.t('admin.nepal.add_district'), class: "btn btn-sm btn-primary" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

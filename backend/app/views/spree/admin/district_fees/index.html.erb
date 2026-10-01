@@ -1,0 +1,94 @@
+<%# /admin/manage-fee — every district with its fee (Part 4). %>
+<% content_for(:page_title) do %>
+  <%= Spree.t('admin.nepal.manage_fee') %>
+<% end %>
+
+<% content_for :page_actions do %>
+  <span class="text-sm text-gray-600">NPR</span>
+<% end %>
+
+<%# Default fallback fee (calculator preference) %>
+<div class="card mb-4">
+  <div class="card-header">
+    <strong><%= Spree.t('admin.nepal.default_fee_title') %></strong>
+  </div>
+  <div class="card-body">
+    <% if @calculator.present? %>
+      <%= form_with url: spree.update_default_fee_admin_district_fees_path, method: :post, class: "flex items-center gap-2" do |f| %>
+        <%= f.number_field :default_fee, value: @calculator.preferred_default_fee,
+              min: 0, step: 1, class: "form-control form-control-sm", required: true %>
+        <%= f.submit Spree.t(:update), class: "btn btn-sm btn-primary" %>
+        <small class="text-gray-600"><%= Spree.t('admin.nepal.default_fee_help') %></small>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-gray-600"><%= Spree.t('admin.nepal.no_district_calculator') %></p>
+    <% end %>
+  </div>
+</div>
+
+<%# Filter by province + search by district name %>
+<div class="card mb-4">
+  <div class="card-body">
+    <%= form_with url: spree.admin_manage_fee_path, method: :get, class: "flex items-center gap-2" do |f| %>
+      <%= f.select :province_id,
+            options_from_collection_for_select(@provinces, :id, :name, @province_id),
+            { include_blank: true }, { class: "form-control form-control-sm", onchange: "this.form.requestSubmit()" } %>
+      <%= f.search_field :q, value: @query, class: "form-control form-control-sm",
+            placeholder: "Search districts", aria_label: "Search districts" %>
+      <%= f.submit Spree.t(:search), class: "btn btn-sm btn-light" %>
+    <% end %>
+  </div>
+</div>
+
+<%# Set fee for an entire province %>
+<div class="card mb-4">
+  <div class="card-body">
+    <%= form_with url: spree.set_province_fee_admin_district_fees_path, method: :post, class: "flex items-center gap-2" do |f| %>
+      <%= f.select :province_id, options_from_collection_for_select(@provinces, :id, :name),
+            {}, { class: "form-control form-control-sm", required: true } %>
+      <%= f.number_field :shipping_fee, min: 0, step: 1, class: "form-control form-control-sm",
+            placeholder: "Fee (NPR)", aria_label: "Fee (NPR)", required: true %>
+      <%= f.submit Spree.t('admin.nepal.set_province_fee'),
+            class: "btn btn-sm btn-primary",
+            data: { turbo_confirm: Spree.t(:are_you_sure) } %>
+    <% end %>
+  </div>
+</div>
+
+<%# Bulk edit (all rows, one submit) + per-row inline save via formaction. %>
+<%= form_with url: spree.bulk_update_admin_district_fees_path(province_id: @province_id, q: @query),
+      method: :post, data: { turbo_frame: "_top" } do %>
+  <div class="card">
+    <div class="card-header items-center justify-between">
+      <strong><%= pluralize(@districts.size, 'district') %></strong>
+      <%= submit_tag Spree.t(:save), class: "btn btn-sm btn-primary" %>
+    </div>
+    <div class="card-body p-0">
+      <% @districts.each do |district| %>
+        <div class="flex items-center justify-between gap-2 border-b px-4 py-2.5 last:border-b-0">
+          <div class="min-w-0">
+            <span class="text-sm text-gray-900"><%= district.name %></span>
+            <small class="text-gray-600"><%= district.province.name %></small>
+            <% unless district.active? %>
+              <span class="badge badge-inactive"><%= Spree.t(:inactive) %></span>
+            <% end %>
+            <% unless district.fee_configured? %>
+              <span class="badge badge-fee-missing"><%= Spree.t('admin.nepal.fee_not_set') %></span>
+            <% end %>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <%= number_field_tag "fees[#{district.id}]", district.shipping_fee,
+                  min: 0, step: 1, class: "form-control form-control-sm", required: true,
+                  aria_label: district.name %>
+            <%# Per-row inline save: submits this form to the single-update %>
+            <%# endpoint, which picks this row's fee out of the fees hash. %>
+            <%= button_tag Spree.t(:save),
+                  type: "submit",
+                  formaction: spree.admin_district_fee_path(district, province_id: @province_id, q: @query),
+                  class: "btn btn-sm btn-light" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

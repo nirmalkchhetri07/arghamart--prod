@@ -36,11 +36,33 @@ Rails.application.routes.draw do
           end
         end
       end
+
+      # Nepal delivery geography (Parts 3-4). Custom pages, additive only —
+      # no gem routes reopened or removed.
+      get 'manage-address', to: 'provinces#index', as: :manage_address
+      get 'manage-fee', to: 'district_fees#index', as: :manage_fee
+      resources :provinces, only: %i[update]
+      resources :districts, only: %i[create update destroy] do
+        member do
+          post :activate
+          post :deactivate
+        end
+      end
+      resources :district_fees, only: %i[update] do
+        collection do
+          post :bulk_update
+          post :set_province_fee
+          post :update_default_fee
+        end
+      end
     end
 
     namespace :api do
       namespace :v3 do
         namespace :store do
+          namespace :nepal do
+            resources :provinces, only: %i[index]
+          end
           resources :carts, only: [] do
             resources :payment_sessions, only: [] do
               member do

@@ -15,9 +15,11 @@
 # More on configuring Spree preferences can be found at:
 # https://docs.spreecommerce.org/developer/customization
 Spree.config do |config|
-  # Example:
-  # Uncomment to stop tracking inventory levels in the application
-  # config.track_inventory_levels = false
+  # Nepal-only market: phone is required on every checkout address (enforced
+  # in Spree::AddressDecorator#require_phone? as well — this keeps the admin
+  # UI and Spree defaults consistent). Zip stays optional via
+  # #require_zipcode? override.
+  config.address_requires_phone = true
 end
 
 # Configure Spree Dependencies
@@ -46,6 +48,11 @@ Rails.application.config.after_initialize do
   # Spree.shipping_methods << Spree::ShippingMethods::SuperExpensiveNotVeryFastShipping
   # Spree.payment_methods << Spree::PaymentMethods::VerySafeAndReliablePaymentMethod
 
+  # Nepal district shipping (Part 5). Appended to the engine's default list
+  # so it appears in the admin shipping-method calculator dropdown alongside
+  # FlatRate/PerItem/etc.
+  Spree.calculators.shipping_methods << Spree::Calculator::Shipping::DistrictShipping
+
   # Spree.calculators.tax_rates << Spree::TaxRates::FinanceTeamForcedMeToCodeThis
 
   # Spree.stock_splitters << Spree::Stock::Splitters::SecretLogicSplitter
@@ -66,6 +73,50 @@ Rails.application.config.after_initialize do
   # Role-based permissions
   Spree.permissions.assign(:default, [Spree::PermissionSets::DefaultCustomer])
   Spree.permissions.assign(:admin, [Spree::PermissionSets::SuperUser])
+
+  # Nepal delivery pages (Parts 3-4) in the admin sidebar, between Reports
+  # (60) and Integrations (80). SuperUser-only via the manage guards below;
+  # staff without district access simply don't see the section.
+  sidebar = Spree.admin.navigation.sidebar
+  sidebar.add :nepal,
+              label: 'admin.nepal.section',
+              url: :admin_manage_address_path,
+              icon: 'map-pin',
+              position: 70,
+              if: -> { can?(:manage, Spree::District) } do |nepal|
+    nepal.add :manage_address,
+              label: 'admin.nepal.manage_address',
+              url: :admin_manage_address_path,
+              position: 10,
+              active: -> { controller_name == 'provinces' || controller_name == 'districts' },
+              if: -> { can?(:manage, Spree::District) }
+    nepal.add :manage_fee,
+              label: 'admin.nepal.manage_fee',
+              url: :admin_manage_fee_path,
+              position: 20,
+              active: -> { controller_name == 'district_fees' },
+              if: -> { can?(:manage, Spree::District) }
+  end
+
+  # Same pages inside Settings (admin/settings area). The main sidebar
+  # switches to the settings nav when a SettingsConcern controller renders,
+  # so without these the pages are only reachable by direct URL once the
+  # user clicks "Settings". Positioned between Zones (80) and Shipping (90).
+  settings_nav = Spree.admin.navigation.settings
+  settings_nav.add :manage_address,
+                   label: 'admin.nepal.manage_address',
+                   url: :admin_manage_address_path,
+                   icon: 'map-pin',
+                   position: 85,
+                   active: -> { controller_name == 'provinces' || controller_name == 'districts' },
+                   if: -> { can?(:manage, Spree::District) }
+  settings_nav.add :manage_fee,
+                   label: 'admin.nepal.manage_fee',
+                   url: :admin_manage_fee_path,
+                   icon: 'coins',
+                   position: 86,
+                   active: -> { controller_name == 'district_fees' },
+                   if: -> { can?(:manage, Spree::District) }
 end
 
 Spree.user_class = 'Spree::User'

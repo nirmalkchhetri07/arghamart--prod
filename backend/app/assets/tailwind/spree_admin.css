@@ -70,4 +70,25 @@
   [dir="rtl"] .sidebar-mobile.sidebar-mobile-open .sidebar-panel {
     transform: translateX(0);
   }
+
+  /* Nepal address format on the admin address card (order Shipping/Billing
+   * Address, customer profile addresses) — see
+   * app/views/spree/admin/shared/_address.html.erb. The stock partial only
+   * prints city/state/zip, which leaves District and Province invisible on
+   * Nepal addresses, so those rows are labelled instead. */
+  .nepal-address {
+    @apply mt-1 flex flex-col gap-1;
+  }
+
+  .nepal-address-row {
+    @apply flex items-baseline gap-3 text-sm;
+  }
+
+  .nepal-address-row dt {
+    @apply w-44 shrink-0 text-gray-500;
+  }
+
+  .nepal-address-row dd {
+    @apply min-w-0 break-words text-gray-900;
+  }
 }
