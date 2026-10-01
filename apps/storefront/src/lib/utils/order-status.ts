@@ -4,12 +4,14 @@
  */
 
 export const PAYMENT_STATE_KEY: Record<string, string> = {
+  none: "none",
+  authorized: "authorized",
+  partially_paid: "partiallyPaid",
   paid: "paid",
-  balance_due: "balanceDue",
-  credit_owed: "creditOwed",
-  pending: "pending",
-  failed: "failed",
-  void: "void",
+  partially_refunded: "partiallyRefunded",
+  refunded: "refunded",
+  overcharged: "overcharged",
+  voided: "voided",
 };
 
 export const SHIPMENT_STATE_KEY: Record<string, string> = {
@@ -26,11 +28,13 @@ export function getPaymentStatusColor(state: string | null): string {
   switch (state) {
     case "paid":
       return "bg-green-100 text-green-800";
-    case "balance_due":
-    case "pending":
+    case "none":
+    case "authorized":
+    case "partially_paid":
+    case "partially_refunded":
       return "bg-yellow-100 text-yellow-800";
-    case "failed":
-    case "void":
+    case "overcharged":
+    case "voided":
       return "bg-red-100 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";

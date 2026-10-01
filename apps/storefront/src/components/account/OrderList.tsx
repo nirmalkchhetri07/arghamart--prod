@@ -79,6 +79,7 @@ export async function OrderList({ orders, basePath, locale }: OrderListProps) {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  {/* Store API uses payment_status and its own status vocabulary. */}
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium capitalize ${getPaymentStatusColor(order.payment_status)}`}
                   >

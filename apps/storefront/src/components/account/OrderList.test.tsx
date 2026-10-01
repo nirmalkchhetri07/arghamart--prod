@@ -15,6 +15,8 @@ vi.mock("next-intl/server", () => ({
       actions: "Actions",
       view: "View",
       paid: "Paid",
+      none: "Balance Due",
+      partiallyPaid: "Partially Paid",
       shipped: "Shipped",
       delivered: "Delivered",
       notAvailable: "N/A",
@@ -103,5 +105,28 @@ describe("OrderList delivery badge", () => {
 
     await screen.findByText("Shipped");
     expect(screen.queryByText("Delivered")).not.toBeInTheDocument();
+  });
+});
+
+describe("OrderList payment badge", () => {
+  it("reads payment_status from the Store API response", async () => {
+    await renderList([order({ payment_status: "paid" })]);
+
+    const badge = await screen.findByText("Paid");
+    expect(badge).toHaveClass("bg-green-100", "text-green-800");
+  });
+
+  it("shows Balance Due for an unpaid order", async () => {
+    await renderList([order({ payment_status: "none" })]);
+
+    const badge = await screen.findByText("Balance Due");
+    expect(badge).toHaveClass("bg-yellow-100", "text-yellow-800");
+  });
+
+  it("shows Partially Paid for a partially paid order", async () => {
+    await renderList([order({ payment_status: "partially_paid" })]);
+
+    const badge = await screen.findByText("Partially Paid");
+    expect(badge).toHaveClass("bg-yellow-100", "text-yellow-800");
   });
 });

@@ -38,20 +38,59 @@ RSpec.describe 'Payment order-state refresh', type: :model do
     payment.capture!
 
     expect(payment.reload).to be_completed
-    expect(order.reload.payment_state).to eq('paid')
+    order.reload
+    expect(order.payment_total).to eq(order.total)
+    expect(order.outstanding_balance).to eq(0)
+    expect(order.payment_state).to eq('paid')
     expect(order.state).not_to eq('complete')
+  end
+
+  it 'keeps the remaining balance for a partial payment on a draft order' do
+    order = create(:order_with_line_items, store: store)
+    order.reload.update_with_updater!
+    payment_amount = (order.reload.total / 2).round(2)
+    payment = create(:payment, order: order, payment_method: cash_method,
+                               amount: payment_amount, state: 'checkout')
+
+    payment.capture!
+
+    order.reload
+    expect(order.payment_total).to eq(payment_amount)
+    expect(order.outstanding_balance).to eq(order.total - payment_amount)
+    expect(order.payment_state).to eq('balance_due')
   end
 
   it 're-opens the balance when a completed payment is voided' do
     payment = draft_order_with_cash
     order = payment.order
     payment.capture!
-    expect(order.reload.payment_state).to eq('paid')
+    order.reload
+    expect(order.payment_total).to eq(order.total)
+    expect(order.outstanding_balance).to eq(0)
+    expect(order.payment_state).to eq('paid')
 
     payment.void_transaction!
 
     expect(payment.reload).to be_void
-    expect(order.reload.payment_state).to eq('balance_due')
+    order.reload
+    expect(order.payment_total).to eq(0)
+    expect(order.outstanding_balance).to eq(order.total)
+    expect(order.payment_state).to eq('balance_due')
+  end
+
+  it 'records an overpayment as credit owed on a draft order' do
+    order = create(:order_with_line_items, store: store)
+    order.reload.update_with_updater!
+    payment_amount = order.reload.total + 25
+    payment = create(:payment, order: order, payment_method: cash_method,
+                               amount: payment_amount, state: 'checkout')
+
+    payment.capture!
+
+    order.reload
+    expect(order.payment_total).to eq(payment_amount)
+    expect(order.outstanding_balance).to eq(0)
+    expect(order.payment_state).to eq('credit_owed')
   end
 
   it 'leaves a pending COD-style payment on balance due (regression)' do
@@ -61,6 +100,9 @@ RSpec.describe 'Payment order-state refresh', type: :model do
     payment.process!
 
     expect(payment.reload).to be_pending
-    expect(order.reload.payment_state).not_to eq('paid')
+    order.reload
+    expect(order.payment_total).to eq(0)
+    expect(order.outstanding_balance).to eq(order.total)
+    expect(order.payment_state).to eq('balance_due')
   end
 end
