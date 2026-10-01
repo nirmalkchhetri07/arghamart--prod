@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   forwardRef,
   useEffect,
@@ -35,6 +35,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { NepalProvince } from "@/lib/data/nepal";
+import {
+  formatMunicipalityOption,
+  getMunicipalitiesForDistrict,
+} from "@/lib/data/nepal-municipalities";
 import { cn } from "@/lib/utils";
 import {
   type NepalAddressData,
@@ -212,6 +216,7 @@ export const NepalAddressForm = forwardRef<
 ) {
   const t = useTranslations("address");
   const tc = useTranslations("common");
+  const locale = useLocale();
 
   const form = useForm<NepalAddressFormValues>({
     resolver: zodResolver(nepalAddressSchema),
@@ -229,6 +234,8 @@ export const NepalAddressForm = forwardRef<
   });
 
   const provinceId = useWatch({ control: form.control, name: "provinceId" });
+  const districtId = useWatch({ control: form.control, name: "districtId" });
+  const cityValue = useWatch({ control: form.control, name: "city" });
   const allValues = useWatch({ control: form.control });
 
   const districts = useMemo(
@@ -236,13 +243,53 @@ export const NepalAddressForm = forwardRef<
     [provinces, provinceId],
   );
 
-  // Changing the province clears the district (it belongs to the old one).
+  const districtName = useMemo(() => {
+    for (const province of provinces) {
+      const district = province.districts.find((d) => d.id === districtId);
+      if (district) return district.name;
+    }
+    return "";
+  }, [provinces, districtId]);
+
+  // Municipalities unlock once a district is selected. Matched by district
+  // name against the static local-level dataset (aliases cover the few
+  // backend-vs-source spelling differences).
+  const municipalities = useMemo(
+    () => getMunicipalitiesForDistrict(districtName),
+    [districtName],
+  );
+
+  const municipalityOptions = useMemo(() => {
+    const options = municipalities.map((level) => ({
+      id: level.name_en,
+      name: formatMunicipalityOption(level, locale),
+    }));
+    // Keep previously saved custom cities visible instead of dropping them
+    // when they aren't in the dataset (legacy free-text addresses).
+    if (cityValue && !options.some((o) => o.id === cityValue)) {
+      options.push({ id: cityValue, name: cityValue });
+    }
+    return options;
+  }, [municipalities, cityValue, locale]);
+
+  // Changing the province clears the district (it belongs to the old one),
+  // and the municipality along with it.
   const handleProvinceSelect = (id: string) => {
     form.setValue("provinceId", id, {
       shouldValidate: true,
       shouldTouch: true,
     });
     form.setValue("districtId", "", { shouldValidate: true });
+    form.setValue("city", "", { shouldValidate: true });
+  };
+
+  // Changing the district clears the municipality (it belongs to the old one).
+  const handleDistrictSelect = (id: string) => {
+    form.setValue("districtId", id, {
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+    form.setValue("city", "", { shouldValidate: true });
   };
 
   // Live values for parent autosave flows (guarded against unchanged
@@ -368,12 +415,7 @@ export const NepalAddressForm = forwardRef<
                     emptyText={t("noDistrictFound")}
                     options={districts.map((d) => ({ id: d.id, name: d.name }))}
                     value={field.value}
-                    onSelect={(id) =>
-                      form.setValue("districtId", id, {
-                        shouldValidate: true,
-                        shouldTouch: true,
-                      })
-                    }
+                    onSelect={handleDistrictSelect}
                     disabled={disabled || !provinceId}
                     idPrefix={idPrefix}
                     field="district"
@@ -417,13 +459,37 @@ export const NepalAddressForm = forwardRef<
                   {t("cityMunicipality")}
                 </FormLabel>
                 <FormControl>
-                  <Input
-                    id={`${idPrefix}-city`}
-                    autoComplete="address-level2"
-                    placeholder={t("cityMunicipality")}
-                    disabled={disabled}
-                    {...field}
-                  />
+                  {municipalities.length > 0 ? (
+                    <Combobox
+                      label={t("cityMunicipality")}
+                      placeholder={
+                        !districtId
+                          ? t("selectDistrictFirst")
+                          : t("selectMunicipality")
+                      }
+                      searchPlaceholder={t("searchMunicipality")}
+                      emptyText={t("noMunicipalityFound")}
+                      options={municipalityOptions}
+                      value={field.value}
+                      onSelect={(id) =>
+                        form.setValue("city", id, {
+                          shouldValidate: true,
+                          shouldTouch: true,
+                        })
+                      }
+                      disabled={disabled || !districtId}
+                      idPrefix={idPrefix}
+                      field="city"
+                    />
+                  ) : (
+                    <Input
+                      id={`${idPrefix}-city`}
+                      autoComplete="address-level2"
+                      placeholder={t("cityMunicipality")}
+                      disabled={disabled || !districtId}
+                      {...field}
+                    />
+                  )}
                 </FormControl>
                 <FormMessage />
               </FormItem>

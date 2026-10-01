@@ -292,7 +292,7 @@
     "lastName": "Apellido",
     "company": "Empresa (opcional)",
     "address": "Direccion",
-    "streetAddress": "Direccion",
+    "streetAddress": "Dirección local",
     "apartment": "Apartamento, suite, etc. (opcional)",
     "city": "Ciudad",
     "country": "Pais",
@@ -327,6 +327,10 @@
     "searchDistrict": "Search districts",
     "noDistrictFound": "No district found",
     "selectProvinceFirst": "Select a province first",
+    "selectDistrictFirst": "Select a district first",
+    "selectMunicipality": "Select city / municipality",
+    "searchMunicipality": "Search cities / municipalities",
+    "noMunicipalityFound": "No city / municipality found",
     "cityMunicipality": "City or municipality",
     "zipCodeOptional": "ZIP / Postal code (optional)",
     "selectDistrictPrompt": "Please select your district",
@@ -336,8 +340,8 @@
     "phoneInvalid": "Enter a valid Nepali phone number",
     "provinceRequired": "Select your province",
     "districtRequired": "Select your district",
-    "streetRequired": "Enter your street address",
-    "cityRequired": "Enter your city or municipality"
+    "streetRequired": "Ingrese su dirección local",
+    "cityRequired": "Select your city or municipality"
   },
   "account": {
     "myAccount": "Mi cuenta",

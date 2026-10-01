@@ -160,8 +160,9 @@ export function applyNepalValues(
 
 /**
  * Returns an updated address with the given field changed.
- * Clears state fields when country changes, and clears the district when
- * the province changes (it belongs to the old province).
+ * Clears state fields when country changes, clears the district when the
+ * province changes (it belongs to the old province), and clears the city /
+ * municipality when the district changes (it belongs to the old district).
  */
 export function updateAddressField(
   address: AddressFormData,
@@ -175,6 +176,10 @@ export function updateAddressField(
   }
   if (field === "province_id") {
     updated.district_id = "";
+    updated.city = "";
+  }
+  if (field === "district_id") {
+    updated.city = "";
   }
   return updated;
 }
