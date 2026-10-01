@@ -150,27 +150,6 @@ export function facebookAuthorizeUrl({
 }
 
 /**
- * Probe whether a popup window can still be opened right now: the probe runs
- * inside the click's user-activation window, exactly like the FB.login popup
- * itself would, so a blocked probe predicts a blocked login. Any thrown or
- * missing window counts as "cannot open".
- */
-function canOpenPopup(): boolean {
-  try {
-    const probe = window.open(
-      "about:blank",
-      "facebook_login_probe",
-      "width=1,height=1",
-    );
-    if (!probe) return false;
-    probe.close();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Run `FB.login` in a popup and resolve with the user access token.
  * Resolves "cancelled" when the customer dismisses the dialog and
  * "unavailable" when no popup can run — callers then fall back to the
@@ -188,8 +167,6 @@ export async function facebookPopupLogin(
   } catch {
     return "unavailable";
   }
-  if (!canOpenPopup()) return "unavailable";
-
   return new Promise<FacebookLoginOutcome>((resolve) => {
     let settled = false;
     const settle = (outcome: FacebookLoginOutcome) => {

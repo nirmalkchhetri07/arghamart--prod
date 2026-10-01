@@ -9,15 +9,6 @@ let mod: FacebookModule;
 const originalOpen = Object.getOwnPropertyDescriptor(window, "open");
 const originalLocation = Object.getOwnPropertyDescriptor(window, "location");
 
-/** Make `window.open` return `returnValue` (the probe result). */
-function stubOpen(returnValue: unknown) {
-  Object.defineProperty(window, "open", {
-    value: vi.fn(() => returnValue),
-    configurable: true,
-    writable: true,
-  });
-}
-
 function stubSdk(login: FacebookSdk["login"]): void {
   window.FB = { init: vi.fn(), login: vi.fn(login) };
 }
@@ -114,7 +105,6 @@ describe("loadFacebookSdk", () => {
 
 describe("facebookPopupLogin", () => {
   it("resolves with the access token from FB.login", async () => {
-    stubOpen({ close: vi.fn() });
     stubSdk((callback) =>
       callback({ authResponse: { accessToken: "fb-token" } }),
     );
@@ -125,17 +115,19 @@ describe("facebookPopupLogin", () => {
   });
 
   it("reports a dismissed dialog as cancelled", async () => {
-    stubOpen({ close: vi.fn() });
     stubSdk((callback) => callback({ authResponse: null }));
 
     await expect(mod.facebookPopupLogin("app-1")).resolves.toBe("cancelled");
   });
 
-  it("falls back when the popup is blocked", async () => {
-    stubOpen(null);
+  it("uses the SDK popup directly without opening a probe window", async () => {
+    const open = vi.spyOn(window, "open");
     stubSdk((callback) => callback({ authResponse: { accessToken: "t" } }));
 
-    await expect(mod.facebookPopupLogin("app-1")).resolves.toBe("unavailable");
+    await expect(mod.facebookPopupLogin("app-1")).resolves.toEqual({
+      token: "t",
+    });
+    expect(open).not.toHaveBeenCalled();
   });
 
   it("does not call FB.login on an HTTP page", async () => {
