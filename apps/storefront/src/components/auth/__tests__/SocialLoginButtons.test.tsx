@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-intl", async () => {
@@ -43,6 +43,18 @@ const GOOGLE = {
   provider: "google",
   name: "Google",
   client_id: "test.apps.googleusercontent.com",
+};
+
+const FACEBOOK = {
+  provider: "facebook",
+  name: "Facebook",
+  client_id: "fb-app-id",
+};
+
+const GITHUB = {
+  provider: "github",
+  name: "GitHub",
+  client_id: "gh-client-id",
 };
 
 type GsiCallback = (response: { credential: string }) => void;
@@ -132,5 +144,90 @@ describe("SocialLoginButtons", () => {
 
     expect(mockToastError).toHaveBeenCalledWith("errors.invalid_token");
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("renders Facebook and GitHub buttons for enabled code providers", async () => {
+    mockProviders.mockResolvedValue([FACEBOOK, GITHUB]);
+
+    render(<SocialLoginButtons redirectUrl={null} />);
+    await waitFor(() => expect(mockProviders).toHaveBeenCalled());
+
+    expect(screen.getByText("continueWithFacebook")).toBeInTheDocument();
+    expect(screen.getByText("continueWithGitHub")).toBeInTheDocument();
+  });
+
+  it("redirects to the Facebook dialog with state and stores the nonce", async () => {
+    mockProviders.mockResolvedValue([FACEBOOK]);
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: { origin: "https://shop.example", href: "" },
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      render(<SocialLoginButtons redirectUrl="/us/en/account/orders" />);
+      await waitFor(() => expect(mockProviders).toHaveBeenCalled());
+
+      fireEvent.click(screen.getByText("continueWithFacebook"));
+
+      const href: string = window.location.href;
+      const url = new URL(href);
+      expect(`${url.origin}${url.pathname}`).toBe(
+        "https://www.facebook.com/v20.0/dialog/oauth",
+      );
+      expect(url.searchParams.get("client_id")).toBe("fb-app-id");
+      expect(url.searchParams.get("redirect_uri")).toBe(
+        "https://shop.example/us/en/auth/callback/facebook",
+      );
+      const stored = sessionStorage.getItem("oauth:state:facebook");
+      expect(stored).toBeTruthy();
+      const { parseOauthState } = await import("@/lib/auth/oauth-client");
+      expect(parseOauthState(url.searchParams.get("state"))).toEqual({
+        next: "/us/en/account/orders",
+        nonce: stored,
+      });
+    } finally {
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      });
+      sessionStorage.clear();
+    }
+  });
+
+  it("redirects to the GitHub dialog", async () => {
+    mockProviders.mockResolvedValue([GITHUB]);
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: { origin: "https://shop.example", href: "" },
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      render(<SocialLoginButtons redirectUrl={null} />);
+      await waitFor(() => expect(mockProviders).toHaveBeenCalled());
+
+      fireEvent.click(screen.getByText("continueWithGitHub"));
+
+      const url = new URL(window.location.href as string);
+      expect(`${url.origin}${url.pathname}`).toBe(
+        "https://github.com/login/oauth/authorize",
+      );
+      expect(url.searchParams.get("client_id")).toBe("gh-client-id");
+      expect(url.searchParams.get("redirect_uri")).toBe(
+        "https://shop.example/us/en/auth/callback/github",
+      );
+      expect(sessionStorage.getItem("oauth:state:github")).toBeTruthy();
+    } finally {
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      });
+      sessionStorage.clear();
+    }
   });
 });

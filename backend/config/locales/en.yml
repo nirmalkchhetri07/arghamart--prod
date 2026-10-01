@@ -34,7 +34,7 @@ en:
         position: "Position"
         coming_soon: "coming soon"
         coming_soon_hint: "Only implemented providers can be added."
-        none_yet: "No social login providers yet. Add Google to let customers sign in with it."
+        none_yet: "No social login providers yet. Add one to let customers sign in with it."
         created: "Social login provider added."
         updated: "Social login provider updated."
         deleted: "Social login provider removed. Linked customer accounts are untouched."

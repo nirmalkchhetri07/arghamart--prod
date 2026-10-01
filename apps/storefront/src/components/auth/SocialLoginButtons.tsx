@@ -1,15 +1,25 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { Facebook, Github } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  buildAuthorizeUrl,
+  createOauthState,
+  isOauthCodeProvider,
+  type OauthCodeProvider,
+  oauthStateKey,
+} from "@/lib/auth/oauth-client";
 import {
   getOauthProviders,
   type OauthProviderInfo,
   oauthLogin,
 } from "@/lib/data/oauth";
+import { extractBasePath } from "@/lib/utils/path";
 
 declare global {
   interface Window {
@@ -106,6 +116,57 @@ function GoogleSignInButton({
 }
 
 /**
+ * Redirect-based sign-in for the authorization-code providers (Facebook,
+ * GitHub). Starts the provider's OAuth dialog with this page's callback URL
+ * as redirect_uri — the callback page completes the flow server-side.
+ */
+function CodeProviderButton({
+  provider,
+  clientId,
+  basePath,
+  redirectUrl,
+}: {
+  provider: OauthCodeProvider;
+  clientId: string;
+  basePath: string;
+  redirectUrl: string | null;
+}) {
+  const t = useTranslations("oauth");
+  const Icon = provider === "facebook" ? Facebook : Github;
+
+  function start() {
+    const redirectUri = `${window.location.origin}${basePath}/auth/callback/${provider}`;
+    const { state, nonce } = createOauthState(redirectUrl);
+    try {
+      sessionStorage.setItem(oauthStateKey(provider), nonce);
+    } catch {
+      // Private browsing without storage: the callback still rejects a
+      // mismatched state, failing closed rather than signing in blindly.
+    }
+    window.location.href = buildAuthorizeUrl(provider, {
+      clientId,
+      redirectUri,
+      state,
+    });
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="lg"
+      className="w-full"
+      onClick={start}
+    >
+      <Icon className="h-5 w-5" aria-hidden />
+      {provider === "facebook"
+        ? t("continueWithFacebook")
+        : t("continueWithGitHub")}
+    </Button>
+  );
+}
+
+/**
  * Social sign-in buttons for the login and register pages. Renders one
  * button per enabled, implemented provider from the Store API — unknown
  * providers render nothing, and the whole block renders nothing when no
@@ -117,6 +178,8 @@ export function SocialLoginButtons({
   redirectUrl: string | null;
 }) {
   const t = useTranslations("oauth");
+  const pathname = usePathname();
+  const basePath = extractBasePath(pathname ?? "");
   const [providers, setProviders] = useState<OauthProviderInfo[] | null>(null);
 
   useEffect(() => {
@@ -124,7 +187,10 @@ export function SocialLoginButtons({
   }, []);
 
   const google = providers?.find((p) => p.provider === "google");
-  if (!google) return null;
+  const codeProviders = (providers ?? []).filter((p) =>
+    isOauthCodeProvider(p.provider),
+  );
+  if (!google && codeProviders.length === 0) return null;
 
   return (
     <div className="mt-4">
@@ -138,11 +204,22 @@ export function SocialLoginButtons({
           </span>
         </div>
       </div>
-      <div className="mt-4">
-        <GoogleSignInButton
-          clientId={google.client_id}
-          redirectUrl={redirectUrl}
-        />
+      <div className="mt-4 flex flex-col gap-2">
+        {google && (
+          <GoogleSignInButton
+            clientId={google.client_id}
+            redirectUrl={redirectUrl}
+          />
+        )}
+        {codeProviders.map((p) => (
+          <CodeProviderButton
+            key={p.provider}
+            provider={p.provider as OauthCodeProvider}
+            clientId={p.client_id}
+            basePath={basePath}
+            redirectUrl={redirectUrl}
+          />
+        ))}
       </div>
     </div>
   );

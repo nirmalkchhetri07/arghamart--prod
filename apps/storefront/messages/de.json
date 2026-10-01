@@ -401,8 +401,13 @@
       "provider_disabled": "Diese Anmeldemethode ist derzeit deaktiviert.",
       "email_not_verified": "Deine E-Mail-Adresse ist nicht verifiziert.",
       "failed": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
-      "loadFailed": "Google-Anmeldung konnte nicht geladen werden."
-    }
+      "loadFailed": "Google-Anmeldung konnte nicht geladen werden.",
+      "cancelled": "Anmeldung wurde abgebrochen."
+    },
+    "continueWithFacebook": "Mit Facebook fortfahren",
+    "continueWithGitHub": "Mit GitHub fortfahren",
+    "completingSignIn": "Anmeldung wird abgeschlossen…",
+    "backToSignIn": "Zurück zur Anmeldung"
   },
   "orders": {
     "orderHistory": "Bestellverlauf",

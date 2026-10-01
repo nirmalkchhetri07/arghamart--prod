@@ -8,20 +8,21 @@
 module Spree
   module Oauth
     class Login
-      def self.call(provider_key, credential)
-        new(provider_key, credential).call
+      def self.call(provider_key, credential, redirect_uri: nil)
+        new(provider_key, credential, redirect_uri: redirect_uri).call
       end
 
-      def initialize(provider_key, credential)
+      def initialize(provider_key, credential, redirect_uri: nil)
         @provider_key = provider_key.to_s
         @credential = credential.to_s
+        @redirect_uri = redirect_uri.to_s.presence
       end
 
       def call
         record = Spree::OauthProvider.enabled.find_by(provider: @provider_key)
         raise InvalidToken, "Unknown or disabled OAuth provider: #{@provider_key}" if record.nil?
 
-        verified = record.verifier.verify(@credential, record)
+        verified = record.verifier.verify(@credential, record, redirect_uri: @redirect_uri)
         raise EmailNotVerified, 'Email address is not verified' unless verified[:email_verified]
         raise InvalidToken, 'Verified email is missing' if verified[:email].blank?
 

@@ -6,8 +6,12 @@ module Spree
       module Store
         # Social login for customers.
         #
-        # POST /api/v3/store/auth/:provider with { credential }
+        # POST /api/v3/store/auth/:provider with { credential, redirect_uri? }
         #
+        # Google posts an ID token as `credential`. Facebook/GitHub post the
+        # authorization `code` as `credential` plus the exact `redirect_uri`
+        # the storefront used at the provider (required for the server-side
+        # code exchange; ignored by Google).
         # Verifies the provider credential, resolves (or creates) the
         # customer account, and issues tokens with the exact same shape as
         # the stock login endpoint: it reuses `generate_jwt`,
@@ -53,7 +57,7 @@ module Spree
               )
             end
 
-            user = Spree::Oauth::Login.call(provider_key, params[:credential])
+            user = Spree::Oauth::Login.call(provider_key, params[:credential], redirect_uri: params[:redirect_uri])
             render json: auth_response(user)
           rescue Spree::Oauth::EmailNotVerified => e
             render_error(

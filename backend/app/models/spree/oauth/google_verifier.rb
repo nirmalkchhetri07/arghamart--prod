@@ -8,7 +8,12 @@ require 'googleauth/id_tokens'
 module Spree
   module Oauth
     class GoogleVerifier
-      def self.verify(credential, provider_record)
+      # redirect_uri is accepted for a uniform verifier interface (see
+      # Spree::Oauth::Login) and ignored: the ID-token flow needs only the
+      # audience (client_id), never a server-side exchange.
+      # rubocop:disable Lint/UnusedMethodArgument
+      def self.verify(credential, provider_record, redirect_uri: nil)
+        # rubocop:enable Lint/UnusedMethodArgument
         payload = Google::Auth::IDTokens.verify_oidc(
           credential.to_s, aud: provider_record.client_id
         )

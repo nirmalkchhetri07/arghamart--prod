@@ -401,8 +401,13 @@
       "provider_disabled": "Este método de inicio de sesión está desactivado.",
       "email_not_verified": "Tu correo electrónico no está verificado.",
       "failed": "Algo salió mal. Inténtalo de nuevo.",
-      "loadFailed": "No se pudo cargar el inicio de sesión con Google."
-    }
+      "loadFailed": "No se pudo cargar el inicio de sesión con Google.",
+      "cancelled": "Inicio de sesión cancelado."
+    },
+    "continueWithFacebook": "Continuar con Facebook",
+    "continueWithGitHub": "Continuar con GitHub",
+    "completingSignIn": "Completando el inicio de sesión…",
+    "backToSignIn": "Volver al inicio de sesión"
   },
   "orders": {
     "orderHistory": "Historial de pedidos",

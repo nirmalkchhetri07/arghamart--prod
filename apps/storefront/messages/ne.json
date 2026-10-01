@@ -459,8 +459,13 @@
       "provider_disabled": "यो साइन-इन विधि अहिले बन्द छ।",
       "email_not_verified": "तपाईंको इमेल प्रमाणित छैन।",
       "failed": "केही गलत भयो। कृपया पुनः प्रयास गर्नुहोस्।",
-      "loadFailed": "गुगल साइन-इन लोड हुन सकेन।"
-    }
+      "loadFailed": "गुगल साइन-इन लोड हुन सकेन।",
+      "cancelled": "साइन-इन रद्द गरियो।"
+    },
+    "continueWithFacebook": "फेसबुकसँग जारी राख्नुहोस्",
+    "continueWithGitHub": "गिटहबसँग जारी राख्नुहोस्",
+    "completingSignIn": "साइन-इन पूरा हुँदैछ…",
+    "backToSignIn": "साइन-इनमा फर्कनुहोस्"
   },
   "orders": {
     "orderHistory": "अर्डर इतिहास",

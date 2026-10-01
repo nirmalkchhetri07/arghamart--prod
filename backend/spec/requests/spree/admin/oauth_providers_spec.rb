@@ -55,11 +55,23 @@ RSpec.describe 'Admin Social Login providers', type: :request do
       expect(response).to redirect_to('/admin/social-login')
     end
 
-    it 'rejects non-implemented providers' do
-      expect { post '/admin/oauth_providers', params: { oauth_provider: provider_params(provider: 'facebook') } }.
+    it 'rejects unknown providers' do
+      expect { post '/admin/oauth_providers', params: { oauth_provider: provider_params(provider: 'myspace') } }.
         not_to(change { Spree::OauthProvider.count })
 
       expect(response).to have_http_status(:unprocessable_content)
+    end
+
+    it 'creates Facebook and GitHub code-exchange providers' do
+      expect do
+        post '/admin/oauth_providers', params: { oauth_provider: provider_params(provider: 'facebook', name: 'Facebook', client_id: 'fb-id') }
+      end.
+        to change { Spree::OauthProvider.count }.by(1)
+
+      expect { post '/admin/oauth_providers', params: { oauth_provider: provider_params(provider: 'github', name: 'GitHub', client_id: 'gh-id') } }.
+        to change { Spree::OauthProvider.count }.by(1)
+
+      expect(response).to redirect_to('/admin/social-login')
     end
   end
 

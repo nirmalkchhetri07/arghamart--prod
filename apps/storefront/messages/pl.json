@@ -401,8 +401,13 @@
       "provider_disabled": "Ta metoda logowania jest wyłączona.",
       "email_not_verified": "Twój adres e-mail nie jest zweryfikowany.",
       "failed": "Coś poszło nie tak. Spróbuj ponownie.",
-      "loadFailed": "Nie udało się wczytać logowania przez Google."
-    }
+      "loadFailed": "Nie udało się wczytać logowania przez Google.",
+      "cancelled": "Logowanie zostało anulowane."
+    },
+    "continueWithFacebook": "Kontynuuj przez Facebook",
+    "continueWithGitHub": "Kontynuuj przez GitHub",
+    "completingSignIn": "Kończenie logowania…",
+    "backToSignIn": "Wróć do logowania"
   },
   "orders": {
     "orderHistory": "Historia zamówień",

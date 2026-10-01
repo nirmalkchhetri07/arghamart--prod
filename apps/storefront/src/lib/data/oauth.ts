@@ -43,13 +43,16 @@ export async function getOauthProviders(): Promise<OauthProviderInfo[]> {
 }
 
 /**
- * Sign in with a verified OAuth credential (e.g. Google ID token).
+ * Sign in with a verified OAuth credential: a Google ID token, or a
+ * Facebook/GitHub authorization code (with the exact `redirectUri` the
+ * storefront used at the provider, required for the server-side exchange).
  * Stores tokens and merges the guest cart exactly like password login
  * (via finalizeAuth). Returns a stable error code for localized toasts.
  */
 export async function oauthLogin(
   provider: string,
   credential: string,
+  redirectUri?: string,
 ): Promise<{
   success: boolean;
   user?: {
@@ -70,7 +73,11 @@ export async function oauthLogin(
           "x-spree-api-key": publishableKey,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify(
+          redirectUri
+            ? { credential, redirect_uri: redirectUri }
+            : { credential },
+        ),
       },
     );
     const body = (await response.json().catch(() => null)) as {

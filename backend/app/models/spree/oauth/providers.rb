@@ -3,10 +3,12 @@
 # Social-login provider registry.
 #
 # Adding a provider later means: one verifier class implementing
-# `.verify(credential, provider_record)` returning
+# `.verify(credential, provider_record, redirect_uri: nil)` returning
 # `{ uid:, email:, email_verified:, first_name:, last_name: }`, plus one
-# entry below. Authorization-code providers use the record's client_secret;
-# the Google ID-token flow needs only client_id.
+# entry below. Authorization-code providers (Facebook, GitHub) exchange the
+# code with the record's client_secret server-side and require the exact
+# `redirect_uri` the storefront used; the Google ID-token flow needs only
+# client_id and ignores redirect_uri.
 module Spree
   module Oauth
     module Providers
@@ -14,8 +16,8 @@ module Spree
 
       REGISTRY = [
         Entry.new('google', 'Google', GoogleVerifier, true, false),
-        Entry.new('facebook', 'Facebook', FacebookVerifier, false, true),
-        Entry.new('github', 'GitHub', GithubVerifier, false, true)
+        Entry.new('facebook', 'Facebook', FacebookVerifier, true, true),
+        Entry.new('github', 'GitHub', GithubVerifier, true, true)
       ].freeze
 
       def self.all

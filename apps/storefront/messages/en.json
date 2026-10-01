@@ -401,8 +401,13 @@
       "provider_disabled": "This sign-in method is currently disabled.",
       "email_not_verified": "Your email address is not verified.",
       "failed": "Something went wrong. Please try again.",
-      "loadFailed": "Could not load Google sign-in."
-    }
+      "loadFailed": "Could not load Google sign-in.",
+      "cancelled": "Sign-in was cancelled."
+    },
+    "continueWithFacebook": "Continue with Facebook",
+    "continueWithGitHub": "Continue with GitHub",
+    "completingSignIn": "Completing sign-in…",
+    "backToSignIn": "Back to sign in"
   },
   "orders": {
     "orderHistory": "Order History",

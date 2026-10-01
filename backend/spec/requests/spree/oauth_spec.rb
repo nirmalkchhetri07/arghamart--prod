@@ -15,9 +15,11 @@ RSpec.describe 'Store API OAuth', type: :request do
   describe 'GET /api/v3/store/oauth_providers' do
     it 'returns only enabled, implemented providers without secrets' do
       create(:oauth_provider, provider: 'google', name: 'Google', client_id: 'google-id', enabled: true)
+      create(:oauth_provider, provider: 'facebook', name: 'Facebook', client_id: 'fb-id', enabled: true)
+      create(:oauth_provider, provider: 'github', name: 'GitHub', client_id: 'gh-id', enabled: true)
       # Unimplemented rows cannot be created through validation; force one
       # to prove the endpoint filters them anyway.
-      build(:oauth_provider, provider: 'facebook', name: 'Facebook', client_id: 'fb-id', enabled: true).
+      build(:oauth_provider, provider: 'myspace', name: 'Myspace', client_id: 'my-id', enabled: true).
         save!(validate: false)
 
       get '/api/v3/store/oauth_providers', headers: headers
@@ -25,7 +27,11 @@ RSpec.describe 'Store API OAuth', type: :request do
       expect(response).to have_http_status(:ok)
       providers = JSON.parse(response.body)['data']
       expect(providers).to eq(
-        [{ 'provider' => 'google', 'name' => 'Google', 'client_id' => 'google-id' }]
+        [
+          { 'provider' => 'facebook', 'name' => 'Facebook', 'client_id' => 'fb-id' },
+          { 'provider' => 'github', 'name' => 'GitHub', 'client_id' => 'gh-id' },
+          { 'provider' => 'google', 'name' => 'Google', 'client_id' => 'google-id' }
+        ]
       )
       expect(response.body).not_to include('secret')
     end
@@ -123,6 +129,92 @@ RSpec.describe 'Store API OAuth', type: :request do
       post '/api/v3/store/auth/myspace', params: { credential: 'x' }.to_json, headers: headers
 
       expect(response).to have_http_status(:bad_request)
+    end
+  end
+
+  describe 'POST /api/v3/store/auth/facebook' do
+    let!(:provider_record) do
+      create(:oauth_provider, provider: 'facebook', name: 'Facebook',
+                              client_id: 'fb-id', client_secret: 'fb-secret', enabled: true)
+    end
+    let(:redirect_uri) { 'https://store.example.com/us/en/auth/callback/facebook' }
+    let(:verified_payload) do
+      { uid: 'fb-123', email: 'ada@example.com', email_verified: true,
+        first_name: 'Ada', last_name: 'Lovelace' }
+    end
+
+    def facebook_login(params = {})
+      post '/api/v3/store/auth/facebook',
+           params: { credential: 'auth-code-1', redirect_uri: redirect_uri }.merge(params).to_json,
+           headers: headers
+    end
+
+    it 'passes the code and redirect_uri to the verifier and creates the user' do
+      expect(Spree::Oauth::FacebookVerifier).to receive(:verify).
+        with('auth-code-1', an_object_having_attributes(provider: 'facebook'), redirect_uri: redirect_uri).
+        and_return(verified_payload)
+
+      expect { facebook_login }.to change { Spree.user_class.count }.by(1)
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body['user']['email']).to eq('ada@example.com')
+      expect(Spree::OauthIdentity.find_by(provider: 'facebook', uid: 'fb-123')).to be_present
+    end
+
+    it 'rejects a missing redirect_uri' do
+      facebook_login(redirect_uri: nil)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(JSON.parse(response.body)['error']['code']).to eq('invalid_token')
+    end
+
+    it 'rejects unverified emails' do
+      allow(Spree::Oauth::FacebookVerifier).to receive(:verify).
+        and_raise(Spree::Oauth::EmailNotVerified, 'Email address is not verified')
+
+      facebook_login
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(JSON.parse(response.body)['error']['code']).to eq('email_not_verified')
+    end
+  end
+
+  describe 'POST /api/v3/store/auth/github' do
+    let!(:provider_record) do
+      create(:oauth_provider, provider: 'github', name: 'GitHub',
+                              client_id: 'gh-id', client_secret: 'gh-secret', enabled: true)
+    end
+    let(:redirect_uri) { 'https://store.example.com/us/en/auth/callback/github' }
+    let(:verified_payload) do
+      { uid: '42424242', email: 'tux@example.com', email_verified: true,
+        first_name: 'Tux', last_name: nil }
+    end
+
+    def github_login(params = {})
+      post '/api/v3/store/auth/github',
+           params: { credential: 'auth-code-1', redirect_uri: redirect_uri }.merge(params).to_json,
+           headers: headers
+    end
+
+    it 'passes the code and redirect_uri to the verifier and creates the user' do
+      expect(Spree::Oauth::GithubVerifier).to receive(:verify).
+        with('auth-code-1', an_object_having_attributes(provider: 'github'), redirect_uri: redirect_uri).
+        and_return(verified_payload)
+
+      expect { github_login }.to change { Spree.user_class.count }.by(1)
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body['user']['email']).to eq('tux@example.com')
+      expect(Spree::OauthIdentity.find_by(provider: 'github', uid: '42424242')).to be_present
+    end
+
+    it 'rejects a missing redirect_uri' do
+      github_login(redirect_uri: nil)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(JSON.parse(response.body)['error']['code']).to eq('invalid_token')
     end
   end
 end
