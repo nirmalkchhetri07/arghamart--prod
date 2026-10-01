@@ -402,12 +402,23 @@
       "email_not_verified": "Twój adres e-mail nie jest zweryfikowany.",
       "failed": "Coś poszło nie tak. Spróbuj ponownie.",
       "loadFailed": "Nie udało się wczytać logowania przez Google.",
-      "cancelled": "Logowanie zostało anulowane."
+      "cancelled": "Logowanie zostało anulowane.",
+      "email_missing": "To logowanie nie zawierało adresu e-mail.",
+      "account_exists_confirm_required": "Konto z tym adresem e-mail już istnieje.",
+      "invalid_credentials": "Nieprawidłowy e-mail lub hasło."
     },
     "continueWithFacebook": "Kontynuuj przez Facebook",
     "continueWithGitHub": "Kontynuuj przez GitHub",
     "completingSignIn": "Kończenie logowania…",
-    "backToSignIn": "Wróć do logowania"
+    "backToSignIn": "Wróć do logowania",
+    "emailMissingTitle": "Zakończ logowanie",
+    "emailMissingHint": "To logowanie nie zawierało adresu e-mail. Podaj swój, aby zakończyć.",
+    "accountExistsTitle": "Połącz konto",
+    "accountExistsHint": "Konto z tym adresem e-mail już istnieje. Podaj jego hasło, aby je połączyć.",
+    "emailLabel": "E-mail",
+    "passwordLabel": "Hasło",
+    "continueSignIn": "Kontynuuj",
+    "invalidEmail": "Podaj prawidłowy adres e-mail."
   },
   "orders": {
     "orderHistory": "Historia zamówień",
@@ -701,5 +712,13 @@
       "signInForPricing": "Zaloguj się, aby zobaczyć ceny",
       "signInToOrder": "Zaloguj się, aby zamówić"
     }
+  },
+  "dataDeletion": {
+    "title": "Żądanie usunięcia danych",
+    "received": "Twoje żądanie usunięcia danych Facebooka zostało przyjęte i jest przetwarzane.",
+    "codeMissing": "Ten link statusu nie zawiera kodu potwierdzenia.",
+    "codeLabel": "Kod potwierdzenia",
+    "note": "Odcinamy Facebooka od Twojego konta. Konto i historia zamówień są zachowywane, o ile nie usuniesz ich osobno. Zachowaj ten kod i podaj go w ewentualnych zapytaniach.",
+    "backToStore": "Powrót do sklepu"
   }
 }

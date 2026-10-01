@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 import { createSpreeMiddleware } from "@/lib/spree/middleware";
+import { config as proxyConfig } from "@/proxy";
 
 const middleware = createSpreeMiddleware({
   defaultCountry: "us",
@@ -134,5 +135,40 @@ describe("Spree locale middleware", () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain("/us/en/account?");
+  });
+});
+
+describe("locale-independent top-level routes", () => {
+  it.each([
+    "/fb-callback",
+    "/data-deletion-status",
+  ])("serves %s without a country/locale redirect", (pathname) => {
+    const response = middleware(
+      new NextRequest(`https://store.example${pathname}`),
+    );
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  it("still redirects a bare localized path", () => {
+    const response = middleware(
+      new NextRequest("https://store.example/orders"),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://store.example/us/en/orders",
+    );
+  });
+
+  it("excludes the routes from the middleware matcher too", () => {
+    const matcher = new RegExp(`^${proxyConfig.matcher[0]}$`);
+
+    expect(matcher.test("/fb-callback")).toBe(false);
+    expect(matcher.test("/fb-callback/deep")).toBe(false);
+    expect(matcher.test("/data-deletion-status")).toBe(false);
+    expect(matcher.test("/data-deletion-status/extra")).toBe(false);
+    expect(matcher.test("/us/en/products")).toBe(true);
+    expect(matcher.test("/account")).toBe(true);
   });
 });

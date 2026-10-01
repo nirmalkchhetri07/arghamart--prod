@@ -402,12 +402,23 @@
       "email_not_verified": "Deine E-Mail-Adresse ist nicht verifiziert.",
       "failed": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
       "loadFailed": "Google-Anmeldung konnte nicht geladen werden.",
-      "cancelled": "Anmeldung wurde abgebrochen."
+      "cancelled": "Anmeldung wurde abgebrochen.",
+      "email_missing": "Diese Anmeldung enthielt keine E-Mail-Adresse.",
+      "account_exists_confirm_required": "Ein Konto mit dieser E-Mail-Adresse existiert bereits.",
+      "invalid_credentials": "Falsche E-Mail oder falsches Passwort."
     },
     "continueWithFacebook": "Mit Facebook fortfahren",
     "continueWithGitHub": "Mit GitHub fortfahren",
     "completingSignIn": "Anmeldung wird abgeschlossen…",
-    "backToSignIn": "Zurück zur Anmeldung"
+    "backToSignIn": "Zurück zur Anmeldung",
+    "emailMissingTitle": "Anmeldung abschließen",
+    "emailMissingHint": "Diese Anmeldung enthielt keine E-Mail-Adresse. Gib deine ein, um fortzufahren.",
+    "accountExistsTitle": "Konto verknüpfen",
+    "accountExistsHint": "Ein Konto mit dieser E-Mail-Adresse existiert bereits. Gib dessen Passwort ein, um es zu verknüpfen.",
+    "emailLabel": "E-Mail",
+    "passwordLabel": "Passwort",
+    "continueSignIn": "Weiter",
+    "invalidEmail": "Gib eine gültige E-Mail-Adresse ein."
   },
   "orders": {
     "orderHistory": "Bestellverlauf",
@@ -701,5 +712,13 @@
       "signInForPricing": "Zur Preisanzeige anmelden",
       "signInToOrder": "Zum Bestellen anmelden"
     }
+  },
+  "dataDeletion": {
+    "title": "Anfrage zur Datenlöschung",
+    "received": "Deine Anfrage zur Löschung von Facebook-Daten wurde empfangen und wird bearbeitet.",
+    "codeMissing": "Dieser Statuslink enthält keinen Bestätigungscode.",
+    "codeLabel": "Bestätigungscode",
+    "note": "Wir trennen Facebook von deinem Konto. Dein Konto und deine Bestellhistorie bleiben erhalten, solange du sie nicht separat löschst. Bewahre diesen Code auf und gib ihn bei Rückfragen an.",
+    "backToStore": "Zurück zum Shop"
   }
 }

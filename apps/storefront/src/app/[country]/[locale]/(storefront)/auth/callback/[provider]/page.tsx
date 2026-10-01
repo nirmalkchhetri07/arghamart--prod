@@ -20,13 +20,15 @@ import { resolveAccountRedirect } from "@/lib/utils/account-redirect";
 import { extractBasePath } from "@/lib/utils/path";
 
 /**
- * OAuth callback for the redirect-based providers (Facebook, GitHub).
+ * OAuth callback for the authorization-code providers (currently GitHub).
  *
  * The provider redirects here with `?code=&state=`. We verify the state
  * nonce against sessionStorage, then exchange the code through the Store API
  * (the client secret never leaves the backend) and land on the original
  * return target. Register one URL per market, e.g.
- * `https://shop.example/us/en/auth/callback/facebook`, in each provider app.
+ * `https://shop.example/us/en/auth/callback/github`, in the provider app.
+ * Facebook does not use this page — it returns an access token through the
+ * popup or the fixed `/fb-callback` page instead.
  */
 function OauthCallbackInner() {
   const params = useParams<{ provider: string }>();

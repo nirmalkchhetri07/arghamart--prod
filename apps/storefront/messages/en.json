@@ -402,12 +402,23 @@
       "email_not_verified": "Your email address is not verified.",
       "failed": "Something went wrong. Please try again.",
       "loadFailed": "Could not load Google sign-in.",
-      "cancelled": "Sign-in was cancelled."
+      "cancelled": "Sign-in was cancelled.",
+      "email_missing": "This sign-in didn't include an email address.",
+      "account_exists_confirm_required": "An account with this email already exists.",
+      "invalid_credentials": "Incorrect email or password."
     },
     "continueWithFacebook": "Continue with Facebook",
     "continueWithGitHub": "Continue with GitHub",
     "completingSignIn": "Completing sign-in…",
-    "backToSignIn": "Back to sign in"
+    "backToSignIn": "Back to sign in",
+    "emailMissingTitle": "Finish signing in",
+    "emailMissingHint": "This sign-in didn't include an email address. Enter yours to finish signing in.",
+    "accountExistsTitle": "Link your account",
+    "accountExistsHint": "An account with this email already exists. Enter its password to link your social account.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "continueSignIn": "Continue",
+    "invalidEmail": "Enter a valid email address."
   },
   "orders": {
     "orderHistory": "Order History",
@@ -701,5 +712,13 @@
       "signInForPricing": "Sign in for pricing",
       "signInToOrder": "Sign in to order"
     }
+  },
+  "dataDeletion": {
+    "title": "Data deletion request",
+    "received": "Your Facebook data deletion request has been received and is being processed.",
+    "codeMissing": "This status link did not include a confirmation code.",
+    "codeLabel": "Confirmation code",
+    "note": "We unlink Facebook from your store account. Your store account and order history are kept unless you delete them separately. Keep this code for your records and quote it in any follow-up.",
+    "backToStore": "Back to the store"
   }
 }

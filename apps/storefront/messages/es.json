@@ -402,12 +402,23 @@
       "email_not_verified": "Tu correo electrónico no está verificado.",
       "failed": "Algo salió mal. Inténtalo de nuevo.",
       "loadFailed": "No se pudo cargar el inicio de sesión con Google.",
-      "cancelled": "Inicio de sesión cancelado."
+      "cancelled": "Inicio de sesión cancelado.",
+      "email_missing": "Este inicio de sesión no incluyó un correo electrónico.",
+      "account_exists_confirm_required": "Ya existe una cuenta con este correo electrónico.",
+      "invalid_credentials": "Correo o contraseña incorrectos."
     },
     "continueWithFacebook": "Continuar con Facebook",
     "continueWithGitHub": "Continuar con GitHub",
     "completingSignIn": "Completando el inicio de sesión…",
-    "backToSignIn": "Volver al inicio de sesión"
+    "backToSignIn": "Volver al inicio de sesión",
+    "emailMissingTitle": "Termina de iniciar sesión",
+    "emailMissingHint": "Este inicio de sesión no incluyó un correo electrónico. Introduce el tuyo para terminar.",
+    "accountExistsTitle": "Vincula tu cuenta",
+    "accountExistsHint": "Ya existe una cuenta con este correo electrónico. Introduce su contraseña para vincularla.",
+    "emailLabel": "Correo electrónico",
+    "passwordLabel": "Contraseña",
+    "continueSignIn": "Continuar",
+    "invalidEmail": "Introduce un correo electrónico válido."
   },
   "orders": {
     "orderHistory": "Historial de pedidos",
@@ -701,5 +712,13 @@
       "signInForPricing": "Inicia sesión para ver precios",
       "signInToOrder": "Inicia sesión para pedir"
     }
+  },
+  "dataDeletion": {
+    "title": "Solicitud de eliminación de datos",
+    "received": "Tu solicitud de eliminación de datos de Facebook se ha recibido y se está procesando.",
+    "codeMissing": "Este enlace de estado no incluye un código de confirmación.",
+    "codeLabel": "Código de confirmación",
+    "note": "Desvinculamos Facebook de tu cuenta. Tu cuenta y el historial de pedidos se conservan salvo que los elimines por separado. Guarda este código y menciónalo en cualquier consulta.",
+    "backToStore": "Volver a la tienda"
   }
 }

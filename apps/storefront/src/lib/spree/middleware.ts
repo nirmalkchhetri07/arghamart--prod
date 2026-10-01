@@ -24,7 +24,7 @@ export interface SpreeMiddlewareConfig {
   defaultLocale?: string;
   /** Locale codes for which the storefront has message bundles. */
   supportedLocales?: readonly string[];
-  /** Routes to skip — prefixes matched with startsWith (default: ['/_next', '/api', '/favicon.ico']) */
+  /** Routes to skip — prefixes matched with startsWith (default: ['/_next', '/api', '/dev', '/favicon.ico', '/fb-callback', '/data-deletion-status']) */
   staticRoutes?: string[];
   /** JWT cookie used to identify a potentially authenticated account request. */
   accessTokenCookieName?: string;
@@ -109,6 +109,11 @@ export function createSpreeMiddleware(
     "/api",
     "/dev",
     "/favicon.ico",
+    // Locale-independent top-level pages: the Facebook dialog redirects
+    // (Meta matches redirect_uri exactly) and the data-deletion status page
+    // linked from Meta's callback. Never prefix, guard or rewrite them.
+    "/fb-callback",
+    "/data-deletion-status",
   ];
   const accessTokenCookieName =
     config.accessTokenCookieName ?? ACCESS_TOKEN_COOKIE;

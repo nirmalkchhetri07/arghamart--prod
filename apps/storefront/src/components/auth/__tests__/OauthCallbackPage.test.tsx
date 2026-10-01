@@ -16,9 +16,9 @@ vi.mock("@/lib/data/oauth", () => ({
 const refreshUser = vi.fn();
 const replace = vi.fn();
 
-let mockParams = { provider: "facebook" };
+let mockParams = { provider: "github" };
 let mockSearch = new URLSearchParams();
-let mockPathname = "/us/en/auth/callback/facebook";
+let mockPathname = "/us/en/auth/callback/github";
 
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({ refreshUser }),
@@ -39,7 +39,7 @@ const mockOauthLogin = vi.mocked(oauthLogin);
 
 function seedState(next: string | null) {
   const { state, nonce } = createOauthState(next);
-  sessionStorage.setItem("oauth:state:facebook", nonce);
+  sessionStorage.setItem("oauth:state:github", nonce);
   return state;
 }
 
@@ -47,12 +47,12 @@ describe("OauthCallbackPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
-    mockParams = { provider: "facebook" };
+    mockParams = { provider: "github" };
     mockSearch = new URLSearchParams();
-    mockPathname = "/us/en/auth/callback/facebook";
+    mockPathname = "/us/en/auth/callback/github";
   });
 
-  it("exchanges the code and lands on the return target", async () => {
+  it("exchanges the GitHub code and lands on the return target", async () => {
     const state = seedState("/us/en/account/orders");
     mockSearch = new URLSearchParams({ code: "auth-code-1", state });
     mockOauthLogin.mockResolvedValue({
@@ -64,13 +64,13 @@ describe("OauthCallbackPage", () => {
     await waitFor(() => expect(mockOauthLogin).toHaveBeenCalled());
 
     expect(mockOauthLogin).toHaveBeenCalledWith(
-      "facebook",
+      "github",
       "auth-code-1",
-      `${window.location.origin}/us/en/auth/callback/facebook`,
+      `${window.location.origin}/us/en/auth/callback/github`,
     );
     expect(refreshUser).toHaveBeenCalled();
     expect(replace).toHaveBeenCalledWith("/us/en/account/orders");
-    expect(sessionStorage.getItem("oauth:state:facebook")).toBeNull();
+    expect(sessionStorage.getItem("oauth:state:github")).toBeNull();
   });
 
   it("shows a cancelled message when the provider reports an error", async () => {
@@ -87,7 +87,7 @@ describe("OauthCallbackPage", () => {
 
   it("rejects a mismatched state nonce", async () => {
     const { state } = createOauthState("/us/en/account/orders");
-    sessionStorage.setItem("oauth:state:facebook", "different-nonce");
+    sessionStorage.setItem("oauth:state:github", "different-nonce");
     mockSearch = new URLSearchParams({ code: "auth-code-1", state });
 
     render(<OauthCallbackPage />);

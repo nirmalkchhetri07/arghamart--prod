@@ -100,10 +100,16 @@ Rails.application.routes.draw do
           end
           # Social Login (see Spree::Api::V3::Store::OauthProvidersController
           # and ::OauthController). The :provider constraint keeps this from
-          # ever shadowing the stock auth/login|refresh|logout routes.
+          # ever shadowing the stock auth/login|refresh|logout routes; the
+          # explicit complete route must stay first so provider='complete'
+          # can never reach the login action.
           resources :oauth_providers, only: %i[index]
+          post 'auth/complete', to: 'oauth#complete'
           post 'auth/:provider', to: 'oauth#create',
-                                 constraints: { provider: %r{(?!login|refresh|logout)[a-z_]+} }
+                                 constraints: { provider: %r{(?!login|refresh|logout|complete)[a-z_]+} }
+          # Facebook data-deletion callback (see
+          # Spree::Api::V3::Store::FacebookDataDeletionsController).
+          post 'facebook/data_deletion', to: 'facebook_data_deletions#create'
         end
       end
     end

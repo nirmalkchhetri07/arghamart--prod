@@ -402,12 +402,23 @@
       "email_not_verified": "Votre adresse e-mail n’est pas vérifiée.",
       "failed": "Une erreur est survenue. Veuillez réessayer.",
       "loadFailed": "Impossible de charger la connexion Google.",
-      "cancelled": "Connexion annulée."
+      "cancelled": "Connexion annulée.",
+      "email_missing": "Cette connexion n'a inclus aucune adresse e-mail.",
+      "account_exists_confirm_required": "Un compte avec cet e-mail existe déjà.",
+      "invalid_credentials": "E-mail ou mot de passe incorrect."
     },
     "continueWithFacebook": "Continuer avec Facebook",
     "continueWithGitHub": "Continuer avec GitHub",
     "completingSignIn": "Connexion en cours…",
-    "backToSignIn": "Retour à la connexion"
+    "backToSignIn": "Retour à la connexion",
+    "emailMissingTitle": "Finaliser la connexion",
+    "emailMissingHint": "Cette connexion n'a inclus aucune adresse e-mail. Saisissez la vôtre pour terminer.",
+    "accountExistsTitle": "Lier le compte",
+    "accountExistsHint": "Un compte avec cet e-mail existe déjà. Saisissez son mot de passe pour le lier.",
+    "emailLabel": "E-mail",
+    "passwordLabel": "Mot de passe",
+    "continueSignIn": "Continuer",
+    "invalidEmail": "Saisissez une adresse e-mail valide."
   },
   "orders": {
     "orderHistory": "Historique des commandes",
@@ -701,5 +712,13 @@
       "signInForPricing": "Connectez-vous pour voir les prix",
       "signInToOrder": "Connectez-vous pour commander"
     }
+  },
+  "dataDeletion": {
+    "title": "Demande de suppression de données",
+    "received": "Votre demande de suppression des données Facebook a bien été reçue et est en cours de traitement.",
+    "codeMissing": "Ce lien de statut n'inclut pas de code de confirmation.",
+    "codeLabel": "Code de confirmation",
+    "note": "Nous déconnectons Facebook de votre compte. Votre compte et votre historique de commandes sont conservés sauf suppression séparée. Conservez ce code et mentionnez-le en cas de suivi.",
+    "backToStore": "Retour à la boutique"
   }
 }

@@ -96,13 +96,26 @@ RSpec.describe 'Store API OAuth', type: :request do
       expect(JSON.parse(response.body)['user']['email']).to eq('ginny@example.com')
     end
 
-    it 'rejects unverified emails' do
+    it 'creates a user for an unverified email with no matching account' do
       stub_verification(verified_payload.merge(email_verified: false))
 
-      login
+      expect { login }.to change { Spree.user_class.count }.by(1)
 
-      expect(response).to have_http_status(:unauthorized)
-      expect(JSON.parse(response.body)['error']['code']).to eq('email_not_verified')
+      expect(response).to have_http_status(:ok)
+      expect(JSON.parse(response.body)['user']['email']).to eq('ginny@example.com')
+    end
+
+    it 'returns account_exists_confirm_required when the unverified email is registered' do
+      create(:user, email: 'ginny@example.com')
+      stub_verification(verified_payload.merge(email_verified: false))
+
+      expect { login }.not_to(change { Spree.user_class.count })
+
+      expect(response).to have_http_status(:conflict)
+      body = JSON.parse(response.body)
+      expect(body['error']['code']).to eq('account_exists_confirm_required')
+      expect(body['pending_oauth']).to be_present
+      expect(Spree::OauthIdentity.find_by(provider: 'google', uid: 'google-sub-1')).not_to be_present
     end
 
     it 'rejects disabled providers' do
@@ -137,21 +150,23 @@ RSpec.describe 'Store API OAuth', type: :request do
       create(:oauth_provider, provider: 'facebook', name: 'Facebook',
                               client_id: 'fb-id', client_secret: 'fb-secret', enabled: true)
     end
-    let(:redirect_uri) { 'https://store.example.com/us/en/auth/callback/facebook' }
     let(:verified_payload) do
-      { uid: 'fb-123', email: 'ada@example.com', email_verified: true,
+      { uid: 'fb-123', email: 'ada@example.com', email_verified: false,
         first_name: 'Ada', last_name: 'Lovelace' }
     end
 
-    def facebook_login(params = {})
-      post '/api/v3/store/auth/facebook',
-           params: { credential: 'auth-code-1', redirect_uri: redirect_uri }.merge(params).to_json,
-           headers: headers
+    def stub_fb_verification(result)
+      allow(Spree::Oauth::FacebookVerifier).to receive(:verify).and_return(result)
     end
 
-    it 'passes the code and redirect_uri to the verifier and creates the user' do
+    def facebook_login(credential = 'user-access-token')
+      post '/api/v3/store/auth/facebook',
+           params: { credential: credential }.to_json, headers: headers
+    end
+
+    it 'passes the access token to the verifier and creates the user' do
       expect(Spree::Oauth::FacebookVerifier).to receive(:verify).
-        with('auth-code-1', an_object_having_attributes(provider: 'facebook'), redirect_uri: redirect_uri).
+        with('user-access-token', an_object_having_attributes(provider: 'facebook'), redirect_uri: nil).
         and_return(verified_payload)
 
       expect { facebook_login }.to change { Spree.user_class.count }.by(1)
@@ -162,21 +177,38 @@ RSpec.describe 'Store API OAuth', type: :request do
       expect(Spree::OauthIdentity.find_by(provider: 'facebook', uid: 'fb-123')).to be_present
     end
 
-    it 'rejects a missing redirect_uri' do
-      facebook_login(redirect_uri: nil)
+    it 'logs in the linked user without creating duplicates' do
+      owner = create(:user, email: 'ada@example.com')
+      create(:oauth_identity, user: owner, provider: 'facebook', uid: 'fb-123')
+      stub_fb_verification(verified_payload)
 
-      expect(response).to have_http_status(:unauthorized)
-      expect(JSON.parse(response.body)['error']['code']).to eq('invalid_token')
+      expect { facebook_login }.not_to(change { Spree.user_class.count })
+
+      expect(response).to have_http_status(:ok)
+      expect(JSON.parse(response.body)['user']['email']).to eq('ada@example.com')
     end
 
-    it 'rejects unverified emails' do
-      allow(Spree::Oauth::FacebookVerifier).to receive(:verify).
-        and_raise(Spree::Oauth::EmailNotVerified, 'Email address is not verified')
+    it 'returns account_exists_confirm_required for a registered email' do
+      create(:user, email: 'ada@example.com')
+      stub_fb_verification(verified_payload)
 
-      facebook_login
+      expect { facebook_login }.not_to(change { Spree.user_class.count })
 
-      expect(response).to have_http_status(:unauthorized)
-      expect(JSON.parse(response.body)['error']['code']).to eq('email_not_verified')
+      expect(response).to have_http_status(:conflict)
+      body = JSON.parse(response.body)
+      expect(body['error']['code']).to eq('account_exists_confirm_required')
+      expect(body['pending_oauth']).to be_present
+    end
+
+    it 'returns email_missing when Facebook shares no email' do
+      stub_fb_verification(verified_payload.merge(email: nil))
+
+      expect { facebook_login }.not_to(change { Spree.user_class.count })
+
+      expect(response).to have_http_status(:unprocessable_content)
+      body = JSON.parse(response.body)
+      expect(body['error']['code']).to eq('email_missing')
+      expect(body['pending_oauth']).to be_present
     end
   end
 
@@ -212,6 +244,150 @@ RSpec.describe 'Store API OAuth', type: :request do
 
     it 'rejects a missing redirect_uri' do
       github_login(redirect_uri: nil)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(JSON.parse(response.body)['error']['code']).to eq('invalid_token')
+    end
+
+    it 'returns email_not_verified when the provider email is unverified' do
+      allow(Spree::Oauth::GithubVerifier).to receive(:verify).
+        and_raise(Spree::Oauth::EmailNotVerified, 'Email address is not verified')
+
+      github_login
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(JSON.parse(response.body)['error']['code']).to eq('email_not_verified')
+    end
+  end
+
+  describe 'POST /api/v3/store/auth/complete' do
+    let!(:provider_record) do
+      create(:oauth_provider, provider: 'facebook', name: 'Facebook',
+                              client_id: 'fb-id', client_secret: 'fb-secret', enabled: true)
+    end
+
+    # The test env's :null_store cannot enforce token single-use (writes
+    # always "succeed"), so give these examples a real cache store.
+    before do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+    end
+
+    def pending_token(purpose:, email: nil, uid: 'fb-123')
+      Spree::Oauth::PendingToken.mint(
+        purpose: purpose,
+        identity: { provider: 'facebook', uid: uid, email: email,
+                    first_name: 'Ada', last_name: 'Lovelace' }
+      )
+    end
+
+    def complete(params = {})
+      post '/api/v3/store/auth/complete', params: params.to_json, headers: headers
+    end
+
+    it 'is not swallowed by the provider route' do
+      complete({})
+
+      # Missing pending_oauth → 401 from the complete action, not a 400
+      # "unsupported provider" from oauth#create.
+      expect(JSON.parse(response.body)['error']['code']).to eq('invalid_token')
+    end
+
+    context 'with an email_missing token' do
+      it 'creates the user and identity for a fresh email' do
+        token = pending_token(purpose: Spree::Oauth::PendingToken::EMAIL_MISSING)
+
+        expect { complete(pending_oauth: token, email: 'newbie@example.com') }.
+          to change { Spree.user_class.count }.by(1)
+
+        expect(response).to have_http_status(:ok)
+        body = JSON.parse(response.body)
+        expect(body['user']['email']).to eq('newbie@example.com')
+        identity = Spree::OauthIdentity.find_by!(provider: 'facebook', uid: 'fb-123')
+        expect(identity.email).to eq('newbie@example.com')
+      end
+
+      it 'rejects a blank or invalid email' do
+        token = pending_token(purpose: Spree::Oauth::PendingToken::EMAIL_MISSING)
+
+        complete(pending_oauth: token, email: 'not-an-email')
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(JSON.parse(response.body)['error']['code']).to eq('email_missing')
+      end
+
+      it 'rotates into the password-proof flow when the email is registered' do
+        create(:user, email: 'taken@example.com')
+        token = pending_token(purpose: Spree::Oauth::PendingToken::EMAIL_MISSING)
+
+        expect { complete(pending_oauth: token, email: 'taken@example.com') }.
+          not_to(change { Spree.user_class.count })
+
+        expect(response).to have_http_status(:conflict)
+        body = JSON.parse(response.body)
+        expect(body['error']['code']).to eq('account_exists_confirm_required')
+        expect(body['pending_oauth']).to be_present
+      end
+    end
+
+    context 'with an account_exists token' do
+      let!(:owner) do
+        create(:user, email: 'ada@example.com', password: 's3cret-pw', password_confirmation: 's3cret-pw')
+      end
+      let(:token) do
+        pending_token(purpose: Spree::Oauth::PendingToken::ACCOUNT_EXISTS, email: 'ada@example.com')
+      end
+
+      it 'links the identity after password proof and returns tokens' do
+        expect { complete(pending_oauth: token, password: 's3cret-pw') }.
+          to change { Spree::OauthIdentity.count }.by(1)
+
+        expect(response).to have_http_status(:ok)
+        body = JSON.parse(response.body)
+        expect(body['token']).to be_present
+        expect(body['user']['email']).to eq('ada@example.com')
+        expect(Spree::OauthIdentity.find_by!(provider: 'facebook', uid: 'fb-123').user).to eq(owner)
+      end
+
+      it 'rejects a wrong password' do
+        complete(pending_oauth: token, password: 'wrong-pw')
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(JSON.parse(response.body)['error']['code']).to eq('invalid_credentials')
+        expect(Spree::OauthIdentity.find_by(provider: 'facebook', uid: 'fb-123')).not_to be_present
+      end
+    end
+
+    it 'rejects a reused pending token' do
+      token = pending_token(purpose: Spree::Oauth::PendingToken::EMAIL_MISSING)
+
+      complete(pending_oauth: token, email: 'first@example.com')
+      expect(response).to have_http_status(:ok)
+
+      complete(pending_oauth: token, email: 'second@example.com')
+      expect(response).to have_http_status(:unauthorized)
+      expect(JSON.parse(response.body)['error']['code']).to eq('invalid_token')
+      expect(Spree.user_class.find_by(email: 'second@example.com')).to be_nil
+    end
+
+    it 'rejects an expired pending token' do
+      payload = {
+        'provider' => 'facebook', 'uid' => 'fb-123', 'email' => nil,
+        'first_name' => 'Ada', 'last_name' => nil, 'purpose' => Spree::Oauth::PendingToken::EMAIL_MISSING,
+        'jti' => SecureRandom.hex(16)
+      }
+      expired = Spree::Oauth::PendingToken.send(:verifier).
+                generate(payload, expires_in: -1.second, purpose: Spree::Oauth::PendingToken::PURPOSE)
+
+      complete(pending_oauth: expired, email: 'late@example.com')
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(JSON.parse(response.body)['error']['code']).to eq('invalid_token')
+    end
+
+    it 'rejects a tampered pending token' do
+      token = pending_token(purpose: Spree::Oauth::PendingToken::EMAIL_MISSING)
+
+      complete(pending_oauth: "#{token}tampered", email: 'x@example.com')
 
       expect(response).to have_http_status(:unauthorized)
       expect(JSON.parse(response.body)['error']['code']).to eq('invalid_token')

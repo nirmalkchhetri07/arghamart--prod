@@ -3,26 +3,34 @@ import {
   buildFacebookAuthorizeUrl,
   buildGithubAuthorizeUrl,
   createOauthState,
+  FB_CALLBACK_PATH,
   isOauthCodeProvider,
+  isPendingOauthCode,
+  oauthReturnToKey,
   oauthStateKey,
   parseOauthState,
 } from "../oauth-client";
 
 const PARAMS = {
   clientId: "test-client-id",
-  redirectUri: "https://shop.example/us/en/auth/callback/facebook",
+  redirectUri: "https://shop.example/fb-callback",
   state: "opaque-state",
 };
 
 describe("oauth-client", () => {
-  it("identifies the redirect-based providers", () => {
-    expect(isOauthCodeProvider("facebook")).toBe(true);
+  it("treats only GitHub as a redirect-code provider", () => {
     expect(isOauthCodeProvider("github")).toBe(true);
+    // Facebook moved to the SDK/token flow with a fixed /fb-callback page.
+    expect(isOauthCodeProvider("facebook")).toBe(false);
     expect(isOauthCodeProvider("google")).toBe(false);
     expect(isOauthCodeProvider("myspace")).toBe(false);
   });
 
-  it("builds the Facebook authorize URL", () => {
+  it("exposes the fixed Facebook callback path", () => {
+    expect(FB_CALLBACK_PATH).toBe("/fb-callback");
+  });
+
+  it("builds the Facebook token-flow authorize URL", () => {
     const url = new URL(buildFacebookAuthorizeUrl(PARAMS));
 
     expect(`${url.origin}${url.pathname}`).toBe(
@@ -30,7 +38,7 @@ describe("oauth-client", () => {
     );
     expect(url.searchParams.get("client_id")).toBe("test-client-id");
     expect(url.searchParams.get("redirect_uri")).toBe(PARAMS.redirectUri);
-    expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.get("response_type")).toBe("token");
     expect(url.searchParams.get("scope")).toContain("email");
     expect(url.searchParams.get("state")).toBe("opaque-state");
   });
@@ -76,8 +84,17 @@ describe("oauth-client", () => {
     expect(parseOauthState(btoa("just a string"))).toBeNull();
   });
 
-  it("scopes the storage key per provider", () => {
+  it("scopes the storage keys per provider", () => {
     expect(oauthStateKey("facebook")).toBe("oauth:state:facebook");
     expect(oauthStateKey("github")).not.toBe(oauthStateKey("facebook"));
+    expect(oauthReturnToKey("facebook")).toBe("oauth:returnTo:facebook");
+    expect(oauthReturnToKey("github")).not.toBe(oauthReturnToKey("facebook"));
+  });
+
+  it("identifies the two pending-completion codes", () => {
+    expect(isPendingOauthCode("email_missing")).toBe(true);
+    expect(isPendingOauthCode("account_exists_confirm_required")).toBe(true);
+    expect(isPendingOauthCode("invalid_token")).toBe(false);
+    expect(isPendingOauthCode(undefined)).toBe(false);
   });
 });

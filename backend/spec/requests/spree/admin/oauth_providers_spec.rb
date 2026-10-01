@@ -73,6 +73,16 @@ RSpec.describe 'Admin Social Login providers', type: :request do
 
       expect(response).to redirect_to('/admin/social-login')
     end
+
+    it 'rejects a Facebook provider without an app secret' do
+      expect do
+        post '/admin/oauth_providers',
+             params: { oauth_provider: provider_params(provider: 'facebook', name: 'Facebook',
+                                                       client_id: 'fb-id', client_secret: '') }
+      end.not_to(change { Spree::OauthProvider.count })
+
+      expect(response).to have_http_status(:unprocessable_content)
+    end
   end
 
   describe 'PATCH /admin/oauth_providers/:id' do

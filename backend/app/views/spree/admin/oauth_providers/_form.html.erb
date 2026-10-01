@@ -23,14 +23,16 @@
             placeholder: Spree.t('admin.oauth.display_name_placeholder') %>
     </div>
     <div class="form-group">
-      <%= f.label :client_id, Spree.t('admin.oauth.client_id') %>
+      <% facebook = f.object.provider == 'facebook' %>
+      <%= f.label :client_id, facebook ? Spree.t('admin.oauth.app_id') : Spree.t('admin.oauth.client_id') %>
       <%= f.text_field :client_id, class: "form-input", required: true, autocomplete: "off" %>
     </div>
     <div class="form-group">
-      <%= f.label :client_secret, Spree.t('admin.oauth.client_secret') %>
+      <%= f.label :client_secret, facebook ? Spree.t('admin.oauth.app_secret') : Spree.t('admin.oauth.client_secret') %>
       <%= f.password_field :client_secret, value: "", class: "form-input", autocomplete: "new-password",
+            required: facebook && f.object.new_record?,
             placeholder: f.object.persisted? ? Spree.t('admin.oauth.secret_keep_hint') : "" %>
-      <small class="form-text text-muted"><%= Spree.t('admin.oauth.secret_hint') %></small>
+      <small class="form-text text-muted"><%= facebook ? Spree.t('admin.oauth.secret_hint_facebook') : Spree.t('admin.oauth.secret_hint') %></small>
     </div>
     <div class="form-group">
       <%= f.label :position, Spree.t('admin.oauth.position') %>

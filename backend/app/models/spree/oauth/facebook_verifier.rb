@@ -3,14 +3,21 @@
 require 'net/http'
 require 'uri'
 require 'json'
+require 'openssl'
 
-# Verifies a Facebook Login authorization code via server-side exchange.
+# Verifies a Facebook Login user access token (from the storefront's FB SDK
+# popup or the /fb-callback redirect flow) server-side.
 #
-# The storefront redirects the customer to Facebook's OAuth dialog and posts
-# the returned `code` (as `credential`) plus the exact `redirect_uri` it
-# used to POST /api/v3/store/auth/facebook. We exchange the code with the
-# record's client_secret, then fetch the profile. The secret never leaves
-# the server.
+# 1. `debug_token` with `<app_id>|<app_secret>` proves the token was issued
+#    for our app, is valid, and is not expired.
+# 2. `/me` reads the profile the token belongs to (with `appsecret_proof`,
+#    so a leaked token alone is not enough to impersonate the call).
+#
+# Facebook exposes no email-verified flag, so `email_verified` is always
+# false — Spree::Oauth::Login decides from the account-resolution rules
+# whether to create, link-after-password-proof, or ask for an email.
+# Tokens and the app secret are never logged (see
+# config/initializers/filter_parameter_logging.rb).
 module Spree
   module Oauth
     class FacebookVerifier
@@ -18,58 +25,55 @@ module Spree
       OPEN_TIMEOUT = 10
       READ_TIMEOUT = 15
 
-      def self.verify(credential, provider_record, redirect_uri: nil)
-        code = credential.to_s
-        raise InvalidToken, 'Authorization code is required' if code.blank?
+      def self.verify(credential, provider_record, redirect_uri: nil) # rubocop:disable Lint/UnusedMethodArgument
+        # Accepted for a uniform verifier interface (see Spree::Oauth::Login);
+        # the token flow needs no redirect_uri.
+        token = credential.to_s
+        raise InvalidToken, 'Access token is required' if token.blank?
         raise InvalidToken, 'Facebook client secret is not configured' if provider_record.client_secret.blank?
-        raise InvalidToken, 'redirect_uri is required' if redirect_uri.to_s.blank?
 
-        access_token = exchange_code(
-          code: code,
-          client_id: provider_record.client_id,
-          client_secret: provider_record.client_secret,
-          redirect_uri: redirect_uri.to_s
-        )
-        profile = fetch_profile(access_token)
+        debug_token(token, provider_record)
+        profile = fetch_profile(token, provider_record.client_secret)
 
         uid = profile['id'].to_s
-        email = profile['email'].to_s.presence
         raise InvalidToken, 'Facebook account id is missing' if uid.blank?
-        raise InvalidToken, 'Verified email is missing' if email.blank?
 
-        # Facebook only returns an email address the user confirmed on
-        # Facebook, so a present email counts as verified. A missing email
-        # (permission denied) is rejected above.
         {
           uid: uid,
-          email: email,
-          email_verified: true,
+          email: profile['email'].to_s.presence,
+          email_verified: false,
           first_name: profile['first_name'].presence,
           last_name: profile['last_name'].presence
         }
       end
 
-      def self.exchange_code(code:, client_id:, client_secret:, redirect_uri:)
-        uri = URI.parse("https://graph.facebook.com/#{GRAPH_VERSION}/oauth/access_token")
+      def self.debug_token(token, provider_record)
+        uri = URI.parse("https://graph.facebook.com/#{GRAPH_VERSION}/debug_token")
         uri.query = URI.encode_www_form(
-          client_id: client_id,
-          client_secret: client_secret,
-          redirect_uri: redirect_uri,
-          code: code
+          input_token: token,
+          access_token: "#{provider_record.client_id}|#{provider_record.client_secret}"
         )
-        body = get_json(uri, 'Facebook code exchange')
-        token = body['access_token'].to_s.presence
-        raise InvalidToken, "Facebook code exchange failed: #{provider_message(body)}" if token.nil?
+        body = get_json(uri, 'Facebook token inspection')
+        data = body['data']
 
-        token
+        raise InvalidToken, "Facebook token inspection failed: #{provider_message(body)}" unless data.is_a?(Hash)
+        raise InvalidToken, 'Facebook token is not valid' unless data['is_valid'] == true
+        raise InvalidToken, 'Facebook token was issued for a different app' if data['app_id'].to_s != provider_record.client_id.to_s
+
+        expires_at = data['expires_at'].to_i
+        # expires_at is a unix timestamp; 0 means the token never expires.
+        raise InvalidToken, 'Facebook token is expired' if expires_at.positive? && expires_at <= Time.now.to_i
+
+        data
       end
-      private_class_method :exchange_code
+      private_class_method :debug_token
 
-      def self.fetch_profile(access_token)
+      def self.fetch_profile(token, client_secret)
         uri = URI.parse("https://graph.facebook.com/#{GRAPH_VERSION}/me")
         uri.query = URI.encode_www_form(
-          fields: 'id,first_name,last_name,email',
-          access_token: access_token
+          fields: 'id,email,first_name,last_name',
+          access_token: token,
+          appsecret_proof: appsecret_proof(token, client_secret)
         )
         body = get_json(uri, 'Facebook profile fetch')
         raise InvalidToken, "Facebook profile fetch failed: #{provider_message(body)}" if body['error'].present?
@@ -77,6 +81,11 @@ module Spree
         body
       end
       private_class_method :fetch_profile
+
+      def self.appsecret_proof(token, client_secret)
+        OpenSSL::HMAC.hexdigest('SHA256', client_secret.to_s, token.to_s)
+      end
+      private_class_method :appsecret_proof
 
       def self.get_json(uri, context)
         response = begin

@@ -3,19 +3,32 @@
 import { Facebook, Github } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  OauthPendingForm,
+  type PendingOAuthState,
+} from "@/components/auth/OauthPendingForm";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  buildAuthorizeUrl,
+  facebookPopupLogin,
+  facebookRedirectUri,
+  isFacebookInAppBrowser,
+  loadFacebookSdk,
+} from "@/lib/auth/facebook";
+import {
+  buildFacebookAuthorizeUrl,
+  buildGithubAuthorizeUrl,
   createOauthState,
   isOauthCodeProvider,
-  type OauthCodeProvider,
+  isPendingOauthCode,
+  oauthReturnToKey,
   oauthStateKey,
 } from "@/lib/auth/oauth-client";
 import {
   getOauthProviders,
+  type OauthLoginResult,
   type OauthProviderInfo,
   oauthLogin,
 } from "@/lib/data/oauth";
@@ -65,12 +78,44 @@ function loadGsi(): Promise<void> {
   return gsiPromise;
 }
 
+/**
+ * Shared handling for a finished (or still pending) social sign-in:
+ * success runs the caller's navigation, the two pending codes swap the
+ * button block for the inline completion form, everything else toasts a
+ * localized error.
+ */
+function useLoginResultHandler(
+  onPending: (pending: PendingOAuthState) => void,
+): (
+  result: OauthLoginResult,
+  onSuccess: () => void | Promise<void>,
+) => Promise<void> {
+  const t = useTranslations("oauth");
+  return useCallback(
+    async (result: OauthLoginResult, onSuccess: () => void | Promise<void>) => {
+      if (result.success) {
+        await onSuccess();
+        return;
+      }
+      const errorCode = result.errorCode;
+      if (result.pendingOAuth && errorCode && isPendingOauthCode(errorCode)) {
+        onPending({ code: errorCode, pendingOAuth: result.pendingOAuth });
+        return;
+      }
+      toast.error(t(`errors.${errorCode ?? "failed"}`));
+    },
+    [onPending, t],
+  );
+}
+
 function GoogleSignInButton({
   clientId,
   redirectUrl,
+  onResult,
 }: {
   clientId: string;
   redirectUrl: string | null;
+  onResult: ReturnType<typeof useLoginResultHandler>;
 }) {
   const t = useTranslations("oauth");
   const router = useRouter();
@@ -87,12 +132,10 @@ function GoogleSignInButton({
           client_id: clientId,
           callback: async (response) => {
             const result = await oauthLogin("google", response.credential);
-            if (result.success) {
+            await onResult(result, async () => {
               await refreshUser();
               if (redirectUrl) router.push(redirectUrl);
-            } else {
-              toast.error(t(`errors.${result.errorCode ?? "failed"}`));
-            }
+            });
           },
         });
         window.google.accounts.id.renderButton(buttonRef.current, {
@@ -110,40 +153,135 @@ function GoogleSignInButton({
     return () => {
       cancelled = true;
     };
-  }, [clientId, redirectUrl, refreshUser, router, t]);
+  }, [clientId, onResult, redirectUrl, refreshUser, router, t]);
 
   return <div ref={buttonRef} className="flex justify-center" />;
 }
 
 /**
- * Redirect-based sign-in for the authorization-code providers (Facebook,
- * GitHub). Starts the provider's OAuth dialog with this page's callback URL
- * as redirect_uri — the callback page completes the flow server-side.
+ * Facebook sign-in via the JS SDK. Prefers a popup (`FB.login`); falls back
+ * to the full-page dialog redirect landing on `/fb-callback` when a popup is
+ * impossible — inside the Facebook/Instagram in-app browser, when the popup
+ * is blocked, or when the SDK fails to load. State nonce + return target go
+ * into sessionStorage before either path leaves the page.
  */
-function CodeProviderButton({
-  provider,
+function FacebookLoginButton({
+  appId,
+  basePath,
+  redirectUrl,
+  onResult,
+}: {
+  appId: string;
+  basePath: string;
+  redirectUrl: string | null;
+  onResult: ReturnType<typeof useLoginResultHandler>;
+}) {
+  const t = useTranslations("oauth");
+  const router = useRouter();
+  const { refreshUser } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  // Preload the SDK on render so the popup opens inside the click's
+  // user-activation window (popups opened after an await are blocked).
+  useEffect(() => {
+    loadFacebookSdk(appId).catch(() => {
+      // Redirect flow needs no SDK — start() falls back to it.
+    });
+  }, [appId]);
+
+  function start() {
+    if (busy) return;
+    setBusy(true);
+    void (async () => {
+      try {
+        const { state, nonce } = createOauthState(redirectUrl);
+        try {
+          sessionStorage.setItem(oauthStateKey("facebook"), nonce);
+          sessionStorage.setItem(
+            oauthReturnToKey("facebook"),
+            redirectUrl ?? "",
+          );
+        } catch {
+          // Private browsing without storage: the /fb-callback page rejects
+          // a missing or mismatched state, failing closed.
+        }
+        const origin = window.location.origin;
+        const dialogUrl = () =>
+          buildFacebookAuthorizeUrl({
+            clientId: appId,
+            redirectUri: facebookRedirectUri(origin),
+            state,
+          });
+
+        if (isFacebookInAppBrowser()) {
+          // In-app browser (FBAN/FBAV/Instagram): popups don't work — go
+          // through the dialog page, which returns to /fb-callback.
+          window.location.href = dialogUrl();
+          return;
+        }
+
+        const outcome = await facebookPopupLogin(appId);
+        if (outcome === "unavailable") {
+          // Blocked popup or SDK failed to load: same dialog redirect — it
+          // needs no SDK, so sign-in still works.
+          window.location.href = dialogUrl();
+          return;
+        }
+        if (outcome === "cancelled") {
+          toast.error(t("errors.cancelled"));
+          return;
+        }
+
+        const result = await oauthLogin("facebook", outcome.token);
+        await onResult(result, async () => {
+          await refreshUser();
+          router.push(redirectUrl || `${basePath}/account`);
+        });
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="lg"
+      className="w-full"
+      onClick={start}
+    >
+      <Facebook className="h-5 w-5" aria-hidden />
+      {t("continueWithFacebook")}
+    </Button>
+  );
+}
+
+/**
+ * GitHub redirects through the localized callback page, which exchanges the
+ * authorization code server-side (client secret never leaves the backend).
+ */
+function GithubButton({
   clientId,
   basePath,
   redirectUrl,
 }: {
-  provider: OauthCodeProvider;
   clientId: string;
   basePath: string;
   redirectUrl: string | null;
 }) {
   const t = useTranslations("oauth");
-  const Icon = provider === "facebook" ? Facebook : Github;
 
   function start() {
-    const redirectUri = `${window.location.origin}${basePath}/auth/callback/${provider}`;
+    const redirectUri = `${window.location.origin}${basePath}/auth/callback/github`;
     const { state, nonce } = createOauthState(redirectUrl);
     try {
-      sessionStorage.setItem(oauthStateKey(provider), nonce);
+      sessionStorage.setItem(oauthStateKey("github"), nonce);
     } catch {
       // Private browsing without storage: the callback still rejects a
       // mismatched state, failing closed rather than signing in blindly.
     }
-    window.location.href = buildAuthorizeUrl(provider, {
+    window.location.href = buildGithubAuthorizeUrl({
       clientId,
       redirectUri,
       state,
@@ -158,10 +296,8 @@ function CodeProviderButton({
       className="w-full"
       onClick={start}
     >
-      <Icon className="h-5 w-5" aria-hidden />
-      {provider === "facebook"
-        ? t("continueWithFacebook")
-        : t("continueWithGitHub")}
+      <Github className="h-5 w-5" aria-hidden />
+      {t("continueWithGitHub")}
     </Button>
   );
 }
@@ -170,7 +306,8 @@ function CodeProviderButton({
  * Social sign-in buttons for the login and register pages. Renders one
  * button per enabled, implemented provider from the Store API — unknown
  * providers render nothing, and the whole block renders nothing when no
- * providers are enabled.
+ * providers are enabled. When the backend answers with one of the two
+ * pending codes, the buttons are swapped for the inline completion form.
  */
 export function SocialLoginButtons({
   redirectUrl,
@@ -179,18 +316,40 @@ export function SocialLoginButtons({
 }) {
   const t = useTranslations("oauth");
   const pathname = usePathname();
+  const router = useRouter();
   const basePath = extractBasePath(pathname ?? "");
+  const { refreshUser } = useAuth();
   const [providers, setProviders] = useState<OauthProviderInfo[] | null>(null);
+  const [pending, setPending] = useState<PendingOAuthState | null>(null);
 
   useEffect(() => {
     getOauthProviders().then(setProviders);
   }, []);
 
+  const handleResult = useLoginResultHandler(setPending);
+
+  const finishSocial = async () => {
+    await refreshUser();
+    router.push(redirectUrl || `${basePath}/account`);
+  };
+
   const google = providers?.find((p) => p.provider === "google");
-  const codeProviders = (providers ?? []).filter((p) =>
-    isOauthCodeProvider(p.provider),
-  );
-  if (!google && codeProviders.length === 0) return null;
+  const facebook = providers?.find((p) => p.provider === "facebook");
+  const github = (providers ?? []).find((p) => isOauthCodeProvider(p.provider));
+
+  if (!google && !facebook && !github) return null;
+
+  if (pending) {
+    return (
+      <div className="mt-4">
+        <OauthPendingForm
+          state={pending}
+          onAuthed={finishSocial}
+          onCancel={() => setPending(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4">
@@ -209,17 +368,24 @@ export function SocialLoginButtons({
           <GoogleSignInButton
             clientId={google.client_id}
             redirectUrl={redirectUrl}
+            onResult={handleResult}
           />
         )}
-        {codeProviders.map((p) => (
-          <CodeProviderButton
-            key={p.provider}
-            provider={p.provider as OauthCodeProvider}
-            clientId={p.client_id}
+        {facebook && (
+          <FacebookLoginButton
+            appId={facebook.client_id}
+            basePath={basePath}
+            redirectUrl={redirectUrl}
+            onResult={handleResult}
+          />
+        )}
+        {github && (
+          <GithubButton
+            clientId={github.client_id}
             basePath={basePath}
             redirectUrl={redirectUrl}
           />
-        ))}
+        )}
       </div>
     </div>
   );

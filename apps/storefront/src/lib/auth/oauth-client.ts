@@ -1,17 +1,45 @@
 /**
- * Client-safe OAuth helpers for the authorization-code providers
- * (Facebook, GitHub). Server actions live in `@/lib/data/oauth`; everything
- * here runs in the browser: authorize-URL building and the `state` round-trip
- * that carries the post-login return target through the provider.
+ * Client-safe OAuth helpers for the social-login providers. Server actions
+ * live in `@/lib/data/oauth`; everything here runs in the browser: authorize
+ * URLs, the `state` round-trip that carries the post-login return target
+ * through the provider, and the fixed paths the flows return to.
+ *
+ * - Google posts an ID token directly to the Store API.
+ * - Facebook signs in through the JS SDK popup (or a full-page dialog
+ *   redirect that lands on the locale-independent `/fb-callback` page) and
+ *   posts the resulting user access token.
+ * - GitHub redirects through a localized callback page that exchanges the
+ *   authorization `code` server-side, so its exact `redirect_uri` must be
+ *   registered in the provider app.
  */
 
-export const OAUTH_CODE_PROVIDERS = ["facebook", "github"] as const;
+export const OAUTH_CODE_PROVIDERS = ["github"] as const;
 
 export type OauthCodeProvider = (typeof OAUTH_CODE_PROVIDERS)[number];
 
 export function isOauthCodeProvider(value: string): value is OauthCodeProvider {
   return (OAUTH_CODE_PROVIDERS as readonly string[]).includes(value);
 }
+
+/** The two social sign-in outcomes finished by an inline form instead of a
+ * redirect: the provider gave no email, or the email already belongs to an
+ * account that must be proven with its password. */
+export type OauthPendingCode =
+  | "email_missing"
+  | "account_exists_confirm_required";
+
+export function isPendingOauthCode(
+  code: string | undefined,
+): code is OauthPendingCode {
+  return code === "email_missing" || code === "account_exists_confirm_required";
+}
+
+/**
+ * Fixed, locale-independent top-level route the Facebook dialog redirects
+ * to. Facebook matches `redirect_uri` exactly, so one value works for every
+ * market; the page itself resolves the country/locale for the return trip.
+ */
+export const FB_CALLBACK_PATH = "/fb-callback";
 
 const FACEBOOK_AUTHORIZE_URL = "https://www.facebook.com/v20.0/dialog/oauth";
 const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
@@ -22,6 +50,10 @@ interface AuthorizeUrlParams {
   state: string;
 }
 
+/**
+ * Facebook token-flow authorize URL (no client secret involved — the popup
+ * and `/fb-callback` flows hand the storefront an access token directly).
+ */
 export function buildFacebookAuthorizeUrl({
   clientId,
   redirectUri,
@@ -30,7 +62,7 @@ export function buildFacebookAuthorizeUrl({
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
-    response_type: "code",
+    response_type: "token",
     scope: "email,public_profile",
     state,
   });
@@ -51,18 +83,18 @@ export function buildGithubAuthorizeUrl({
   return `${GITHUB_AUTHORIZE_URL}?${params.toString()}`;
 }
 
-export function buildAuthorizeUrl(
-  provider: OauthCodeProvider,
-  params: AuthorizeUrlParams,
-): string {
-  return provider === "facebook"
-    ? buildFacebookAuthorizeUrl(params)
-    : buildGithubAuthorizeUrl(params);
-}
-
 /** sessionStorage key holding the one-time CSRF nonce for a provider flow. */
 export function oauthStateKey(provider: string): string {
   return `oauth:state:${provider}`;
+}
+
+/**
+ * sessionStorage key holding the pre-login return target, as a fallback for
+ * flows whose callback cannot trust anything but its own storage (the
+ * Facebook redirect flow carries `next` inside the signed-in-page state too).
+ */
+export function oauthReturnToKey(provider: string): string {
+  return `oauth:returnTo:${provider}`;
 }
 
 function base64UrlEncode(raw: string): string {
