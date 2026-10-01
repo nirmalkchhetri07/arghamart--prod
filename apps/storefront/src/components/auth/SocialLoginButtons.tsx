@@ -1,6 +1,6 @@
 "use client";
 
-import { Facebook, Github } from "lucide-react";
+import { Github } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -244,16 +244,37 @@ function FacebookLoginButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="lg"
-      className="w-full"
-      onClick={start}
+    <div className="flex justify-center">
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        className="relative h-10 w-[320px] px-3"
+        onClick={start}
+      >
+        <span className="absolute left-3 inline-flex">
+          <FacebookBrandIcon />
+        </span>
+        {t("continueWithFacebook")}
+      </Button>
+    </div>
+  );
+}
+
+function FacebookBrandIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
     >
-      <Facebook className="h-5 w-5" aria-hidden />
-      {t("continueWithFacebook")}
-    </Button>
+      <circle cx="12" cy="12" r="10" fill="#1877F2" />
+      <path
+        fill="#fff"
+        d="M13.4 20v-7h2.35l.35-2.73H13.4V8.53c0-.79.22-1.33 1.36-1.33h1.45V4.76c-.25-.03-1.1-.1-2.09-.1-2.07 0-3.49 1.26-3.49 3.58v2.03H8.28V13h2.35v7h2.77Z"
+      />
+    </svg>
   );
 }
 
