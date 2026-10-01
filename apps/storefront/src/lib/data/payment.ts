@@ -29,6 +29,29 @@ function cartTag(surface: Surface): string {
   return `cart${cacheTagSuffix(surface)}`;
 }
 
+/**
+ * Manual QR returns a same-host Active Storage path, which the client
+ * component can't absolutize (SPREE_API_URL is server-only) — prefix it
+ * here so the checkout form can render the QR <img> directly.
+ *
+ * Must run on BOTH create and update responses: after any cart-total change
+ * (e.g. selecting a shipping rate) the sync flow re-stores external_data
+ * from the update response, and a relative path there breaks the QR image
+ * against the storefront origin.
+ */
+function absolutizeQrImageUrl(
+  external: Record<string, unknown>,
+): Record<string, unknown> {
+  if (
+    typeof external.qr_image_url === "string" &&
+    external.qr_image_url.startsWith("/")
+  ) {
+    const baseUrl = getConfig().baseUrl.replace(/\/$/, "");
+    return { ...external, qr_image_url: `${baseUrl}${external.qr_image_url}` };
+  }
+  return external;
+}
+
 export async function createCheckoutPaymentSession(
   cartId: string,
   paymentMethodId: string,
@@ -49,17 +72,9 @@ export async function createCheckoutPaymentSession(
       options,
     );
     updateTag(checkoutTag(surface));
-    const external = { ...(session.external_data as Record<string, unknown>) };
-    // Manual QR returns a same-host Active Storage path, which the client
-    // component can't absolutize (SPREE_API_URL is server-only) — prefix it
-    // here so the checkout form can render the QR <img> directly.
-    if (
-      typeof external.qr_image_url === "string" &&
-      external.qr_image_url.startsWith("/")
-    ) {
-      const baseUrl = getConfig().baseUrl.replace(/\/$/, "");
-      external.qr_image_url = `${baseUrl}${external.qr_image_url}`;
-    }
+    const external = absolutizeQrImageUrl({
+      ...(session.external_data as Record<string, unknown>),
+    });
     return { session: { ...session, external_data: external } };
   }, "Failed to create payment session");
 }
@@ -82,7 +97,10 @@ export async function updateCheckoutPaymentSession(
       surface,
     ).carts.paymentSessions.update(id, sessionId, params, options);
     updateTag(checkoutTag(surface));
-    return { session };
+    const external = absolutizeQrImageUrl({
+      ...(session.external_data as Record<string, unknown>),
+    });
+    return { session: { ...session, external_data: external } };
   }, "Failed to update payment session");
 }
 

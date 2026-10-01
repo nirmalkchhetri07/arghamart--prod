@@ -1,6 +1,7 @@
 "use client";
 
 import type { Fulfillment } from "@spree/sdk";
+import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -13,6 +14,8 @@ interface DeliveryMethodSectionProps {
   processing: boolean;
   errors?: string[];
   feeNote?: string | null;
+  /** True while the address save that (re)estimates rates is in flight. */
+  calculating?: boolean;
 }
 
 export function DeliveryMethodSection({
@@ -21,6 +24,7 @@ export function DeliveryMethodSection({
   processing,
   errors,
   feeNote,
+  calculating,
 }: DeliveryMethodSectionProps) {
   const t = useTranslations("checkout");
 
@@ -42,7 +46,14 @@ export function DeliveryMethodSection({
 
       {fulfillments.length === 0 ? (
         <div className="rounded-sm bg-gray-100 px-4 py-3.5 text-sm text-gray-500">
-          {t("enterShippingAddressForMethods")}
+          {calculating ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t("loadingShippingOptions")}
+            </span>
+          ) : (
+            t("enterShippingAddressForMethods")
+          )}
         </div>
       ) : (
         <div className="space-y-2">

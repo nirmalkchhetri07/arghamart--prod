@@ -823,6 +823,7 @@ function CheckoutPageContentInner({
             processing={processing}
             errors={sectionErrors.shipping}
             feeNote={defaultFeeNote}
+            calculating={saving}
           />
         </div>
 

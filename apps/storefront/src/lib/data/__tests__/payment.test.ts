@@ -7,6 +7,7 @@ const mockClient = {
     complete: vi.fn(),
     paymentSessions: {
       create: vi.fn(),
+      update: vi.fn(),
       complete: vi.fn(),
     },
   },
@@ -28,6 +29,10 @@ vi.mock("@/lib/spree", () => ({
     token: undefined,
   }),
   requireCartId: vi.fn().mockResolvedValue("cart-1"),
+  getConfig: vi.fn().mockReturnValue({
+    baseUrl: "https://api.example.com",
+    publishableKey: "pk_test",
+  }),
 }));
 
 vi.mock("next/cache", () => ({
@@ -39,6 +44,7 @@ import {
   completeCheckoutPaymentSession,
   confirmPaymentAndCompleteCart,
   createCheckoutPaymentSession,
+  updateCheckoutPaymentSession,
 } from "@/lib/data/payment";
 
 const mockSession = {
@@ -99,6 +105,88 @@ describe("payment server actions", () => {
       expect(result).toEqual({
         success: false,
         error: "Gateway unavailable",
+      });
+    });
+  });
+
+  describe("updateCheckoutPaymentSession", () => {
+    it("absolutizes a relative Manual QR image URL", async () => {
+      mockClient.carts.paymentSessions.update.mockResolvedValue({
+        id: "session-1",
+        status: "pending",
+        external_data: {
+          qr_image_url: "/rails/active_storage/blobs/qr.png",
+          instructions: "Pay exactly the total",
+        },
+      });
+
+      const result = await updateCheckoutPaymentSession(
+        "cart-1",
+        "session-1",
+        { amount: "1150.0" },
+      );
+
+      expect(mockClient.carts.paymentSessions.update).toHaveBeenCalledWith(
+        "cart-1",
+        "session-1",
+        { amount: "1150.0" },
+        { spreeToken: "order-token-123", token: undefined },
+      );
+      expect(result).toEqual({
+        success: true,
+        session: {
+          id: "session-1",
+          status: "pending",
+          external_data: {
+            qr_image_url:
+              "https://api.example.com/rails/active_storage/blobs/qr.png",
+            instructions: "Pay exactly the total",
+          },
+        },
+      });
+    });
+
+    it("leaves absolute QR image URLs untouched", async () => {
+      mockClient.carts.paymentSessions.update.mockResolvedValue({
+        id: "session-1",
+        status: "pending",
+        external_data: {
+          qr_image_url: "https://api.example.com/rails/qr.png",
+        },
+      });
+
+      const result = await updateCheckoutPaymentSession(
+        "cart-1",
+        "session-1",
+        { amount: "1150.0" },
+      );
+
+      expect(result).toEqual({
+        success: true,
+        session: {
+          id: "session-1",
+          status: "pending",
+          external_data: {
+            qr_image_url: "https://api.example.com/rails/qr.png",
+          },
+        },
+      });
+    });
+
+    it("returns error on failure", async () => {
+      mockClient.carts.paymentSessions.update.mockRejectedValue(
+        new Error("Session expired"),
+      );
+
+      const result = await updateCheckoutPaymentSession(
+        "cart-1",
+        "session-1",
+        { amount: "1150.0" },
+      );
+
+      expect(result).toEqual({
+        success: false,
+        error: "Session expired",
       });
     });
   });
