@@ -25,14 +25,22 @@ module Spree
         @provinces = Spree::Province.order(:position, :name)
       end
 
-      # PATCH /admin/district_fees/:id — single fee edit. Accepts either
+      # PATCH/POST /admin/district_fees/:id — single fee edit. Accepts either
       # { district: { shipping_fee } } (direct) or { fees: { id => fee } }
       # (per-row save button inside the bulk form, via formaction).
+      #
+      # NOTE: per-row buttons submit the whole bulk form via `formaction`, so
+      # the `fees` hash is keyed by integer DB ids (e.g. fees["12"]) while
+      # params[:id] is the prefixed id (e.g. "dist_xxx"). Look up both.
       def update
         @district = Spree::District.find_by_prefix_id!(params[:id])
-        fee = params.dig(:fees, params[:id].to_s) || fee_params[:shipping_fee]
+        fee = params.dig(:fees, params[:id].to_s) ||
+              params.dig(:fees, @district.id.to_s) ||
+              params.dig(:district, :shipping_fee)
 
-        if @district.update(shipping_fee: fee)
+        if fee.nil?
+          flash[:error] = Spree.t('admin.nepal.fee_invalid')
+        elsif @district.update(shipping_fee: fee)
           flash[:success] = Spree.t('admin.nepal.fee_updated')
         else
           flash[:error] = @district.errors.full_messages.to_sentence
@@ -41,12 +49,24 @@ module Spree
       end
 
       # POST /admin/district_fees/bulk_update — { fees: { id => amount } }.
+      # Accepts integer DB ids (what the form sends) and prefixed ids
+      # (dist_xxx) so both form key styles work.
       def bulk_update
         fees = params.fetch(:fees, {}).permit!.to_h
+        normalized = {}
+        fees.each do |key, value|
+          if key.to_s.start_with?('dist_')
+            district = Spree::District.find_by_prefix_id(key.to_s)
+            normalized[district.id.to_s] = value if district
+          else
+            normalized[key.to_s] = value
+          end
+        end
+
         failures = []
 
-        Spree::District.where(id: fees.keys).find_each do |district|
-          failures << "#{district.name}: #{district.errors.full_messages.to_sentence}" unless district.update(shipping_fee: fees[district.id.to_s])
+        Spree::District.where(id: normalized.keys).find_each do |district|
+          failures << "#{district.name}: #{district.errors.full_messages.to_sentence}" unless district.update(shipping_fee: normalized[district.id.to_s])
         end
 
         if failures.empty?

@@ -49,10 +49,19 @@ Rails.application.routes.draw do
         end
       end
       resources :district_fees, only: %i[update] do
+        # Collection routes MUST come before the POST member route below —
+        # otherwise POST /district_fees/bulk_update matches POST /:id
+        # (id="bulk_update") and returns 404.
         collection do
           post :bulk_update
           post :set_province_fee
           post :update_default_fee
+        end
+        # Per-row Save buttons live inside the bulk form (which is POST), so
+        # they POST via `formaction` to the member path. Accept POST here in
+        # addition to the default PATCH/PUT from `only: %i[update]`.
+        member do
+          post :update
         end
       end
     end

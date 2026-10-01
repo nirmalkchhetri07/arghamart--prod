@@ -82,9 +82,13 @@
                   aria_label: district.name %>
             <%# Per-row inline save: submits this form to the single-update %>
             <%# endpoint, which picks this row's fee out of the fees hash. %>
+            <%# The outer form is POST, so this also POSTs (see POST member %>
+            <%# route in config/routes.rb) — the controller matches by both %>
+            <%# prefixed and integer ids. %>
             <%= button_tag Spree.t(:save),
                   type: "submit",
                   formaction: spree.admin_district_fee_path(district, province_id: @province_id, q: @query),
+                  formmethod: "post",
                   class: "btn btn-sm btn-light" %>
           </div>
         </div>
