@@ -17,6 +17,15 @@ module Spree
                      content_type: Spree::PaymentMethod::ManualQr::PROOF_CONTENT_TYPES,
                      size: { less_than: Spree::PaymentMethod::ManualQr::PROOF_MAX_BYTES },
                      if: -> { proof_image.attached? }
+
+      # Core only recomputes an order's payment_state for completed orders
+      # (Payment#update_order, OrderUpdater#update), so a draft whose payment
+      # completes or voids would keep a stale state (e.g. fully-paid draft
+      # stuck on "Balance Due"). Refresh it here instead. Fires only on a
+      # real state change to completed/void — pending/pre-auth payments
+      # (COD awaiting collection, QR awaiting review) never touch it.
+      base.after_commit :refresh_order_payment_state, on: [:create, :update],
+                                                      if: -> { saved_change_to_state? && (completed? || void?) }
     end
 
     # True for payments taken via the Manual QR method (STI-safe: also true
@@ -96,9 +105,7 @@ module Spree
       end
 
       routing = Rails.application.routes.default_url_options
-      if routing[:host].present?
-        return Spree::Core::Engine.routes.url_helpers.admin_order_url(order, **routing)
-      end
+      return Spree::Core::Engine.routes.url_helpers.admin_order_url(order, **routing) if routing[:host].present?
 
       base = order.store&.formatted_url
       return nil if base.blank?
@@ -107,6 +114,24 @@ module Spree
     end
 
     private
+
+    # Recomputes payment_state even for draft orders (core skips them) and
+    # persists only when it actually changed. Reload first: totals were
+    # persisted by Payment#update_order inside the just-committed
+    # transaction, so compute from post-commit values.
+    def refresh_order_payment_state
+      ord = order.reload
+      # update_payment_total is only persisted for completed payments /
+      # completed orders in core, so recompute it too (void on a draft
+      # otherwise computes against a stale total).
+      ord.updater.update_payment_total
+      ord.updater.update_payment_state
+      # Stock maps "no valid payments" to failed even when money is still
+      # owed; on a draft that reads as a gateway failure. An outstanding
+      # balance with no usable payments means payment is still due.
+      ord.payment_state = 'balance_due' if !ord.completed? && ord.payment_state == 'failed' && ord.outstanding_balance.positive?
+      ord.save! if ord.payment_state_changed? || ord.payment_total_changed?
+    end
 
     # Duplicate checks are scoped to the store: the same screenshot or
     # transaction ID on another tenant's order is not this reviewer's problem.
