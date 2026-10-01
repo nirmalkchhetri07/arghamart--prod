@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_000004) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -76,6 +76,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000004) do
     t.index ["slug", "sluggable_type", "scope", "locale"], name: "index_friendly_id_slugs_unique", unique: true
     t.index ["sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_id"
     t.index ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type"
+  end
+
+  create_table "offline_payment_details", force: :cascade do |t|
+    t.decimal "amount_received", precision: 10, scale: 2, null: false
+    t.decimal "change_returned", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.text "note"
+    t.boolean "pay_later", default: false, null: false
+    t.bigint "payment_id", null: false
+    t.datetime "received_at", null: false
+    t.bigint "received_by_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["payment_id"], name: "index_offline_payment_details_on_payment_id", unique: true
+    t.index ["received_by_id"], name: "index_offline_payment_details_on_received_by_id"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
@@ -2439,6 +2453,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000004) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "offline_payment_details", "spree_admin_users", column: "received_by_id"
+  add_foreign_key "offline_payment_details", "spree_payments", column: "payment_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
