@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { PolicyConsent } from "@/components/policy/PolicyConsent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -246,6 +247,7 @@ export default function RegisterPage() {
               </Button>
             </div>
           </form>
+          <SocialLoginButtons redirectUrl={`${basePath}/account`} />
         </CardContent>
 
         <CardFooter className="justify-center">

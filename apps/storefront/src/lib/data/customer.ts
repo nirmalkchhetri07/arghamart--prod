@@ -33,9 +33,9 @@ async function fetchCustomer(): Promise<Customer> {
 
 /**
  * Post-auth bootstrap: store tokens, associate guest cart, invalidate caches.
- * Shared by login, register, and resetPassword.
+ * Shared by login, register, resetPassword, and OAuth login.
  */
-async function finalizeAuth(token: string, refreshToken: string) {
+export async function finalizeAuth(token: string, refreshToken: string) {
   await setAccessToken(token);
   await setRefreshToken(refreshToken);
 

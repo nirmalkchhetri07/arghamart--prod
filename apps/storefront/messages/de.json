@@ -394,6 +394,16 @@
     "lastNamePlaceholder": "Mustermann",
     "emailPlaceholder": "sie@beispiel.de"
   },
+  "oauth": {
+    "orContinueWith": "oder fortfahren mit",
+    "errors": {
+      "invalid_token": "Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
+      "provider_disabled": "Diese Anmeldemethode ist derzeit deaktiviert.",
+      "email_not_verified": "Deine E-Mail-Adresse ist nicht verifiziert.",
+      "failed": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+      "loadFailed": "Google-Anmeldung konnte nicht geladen werden."
+    }
+  },
   "orders": {
     "orderHistory": "Bestellverlauf",
     "noOrders": "Noch keine Bestellungen",

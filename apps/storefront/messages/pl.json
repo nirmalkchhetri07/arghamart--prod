@@ -394,6 +394,16 @@
     "lastNamePlaceholder": "Kowalski",
     "emailPlaceholder": "ty@przyklad.pl"
   },
+  "oauth": {
+    "orContinueWith": "lub kontynuuj przez",
+    "errors": {
+      "invalid_token": "Logowanie nie powiodło się. Spróbuj ponownie.",
+      "provider_disabled": "Ta metoda logowania jest wyłączona.",
+      "email_not_verified": "Twój adres e-mail nie jest zweryfikowany.",
+      "failed": "Coś poszło nie tak. Spróbuj ponownie.",
+      "loadFailed": "Nie udało się wczytać logowania przez Google."
+    }
+  },
   "orders": {
     "orderHistory": "Historia zamówień",
     "noOrders": "Brak zamówień",

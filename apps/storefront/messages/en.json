@@ -394,6 +394,16 @@
     "lastNamePlaceholder": "Doe",
     "emailPlaceholder": "you@example.com"
   },
+  "oauth": {
+    "orContinueWith": "or continue with",
+    "errors": {
+      "invalid_token": "Sign-in failed. Please try again.",
+      "provider_disabled": "This sign-in method is currently disabled.",
+      "email_not_verified": "Your email address is not verified.",
+      "failed": "Something went wrong. Please try again.",
+      "loadFailed": "Could not load Google sign-in."
+    }
+  },
   "orders": {
     "orderHistory": "Order History",
     "noOrders": "No orders yet",

@@ -452,6 +452,16 @@
     "lastNamePlaceholder": "शर्मा",
     "emailPlaceholder": "ram@example.com"
   },
+  "oauth": {
+    "orContinueWith": "वा जारी राख्नुहोस्",
+    "errors": {
+      "invalid_token": "साइन-इन असफल भयो। कृपया पुनः प्रयास गर्नुहोस्।",
+      "provider_disabled": "यो साइन-इन विधि अहिले बन्द छ।",
+      "email_not_verified": "तपाईंको इमेल प्रमाणित छैन।",
+      "failed": "केही गलत भयो। कृपया पुनः प्रयास गर्नुहोस्।",
+      "loadFailed": "गुगल साइन-इन लोड हुन सकेन।"
+    }
+  },
   "orders": {
     "orderHistory": "अर्डर इतिहास",
     "noOrders": "अझै कुनै अर्डर छैन",

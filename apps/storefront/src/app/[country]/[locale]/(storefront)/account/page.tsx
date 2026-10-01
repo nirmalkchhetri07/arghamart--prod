@@ -14,6 +14,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { AccountShell } from "@/components/account/AccountShell";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -167,6 +168,7 @@ export default function AccountPage() {
                 </Button>
               </div>
             </form>
+            <SocialLoginButtons redirectUrl={redirectUrl} />
           </CardContent>
 
           <CardFooter className="justify-center">
