@@ -10,6 +10,6 @@ export const proxy = createSpreeMiddleware({
 
 export const config = {
   matcher: [
-    "/((?!api/|_next/static|_next/image|favicon.ico|fb-callback(/|$)|data-deletion-status(/|$)|.*\\..*$).*)",
+    "/((?!api/|_next/static|_next/image|favicon.ico|fb-callback(?:/|$)|data-deletion-status(?:/|$)|.*\\..*$).*)",
   ],
 };

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
+import { Suspense } from "react";
 import "../globals.css";
 import { DocumentShell } from "@/components/layout/DocumentShell";
 import {
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function DataDeletionStatusLayout({
+async function LocalizedDataDeletionStatusShell({
   children,
 }: {
   children: React.ReactNode;
@@ -36,5 +37,25 @@ export default async function DataDeletionStatusLayout({
         {children}
       </NextIntlClientProvider>
     </DocumentShell>
+  );
+}
+
+export default function DataDeletionStatusLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <DocumentShell locale={DEFAULT_LOCALE}>
+          <NextIntlClientProvider locale={DEFAULT_LOCALE}>
+            {children}
+          </NextIntlClientProvider>
+        </DocumentShell>
+      }
+    >
+      <LocalizedDataDeletionStatusShell>{children}</LocalizedDataDeletionStatusShell>
+    </Suspense>
   );
 }
