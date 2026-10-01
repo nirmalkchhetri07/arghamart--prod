@@ -7,6 +7,7 @@ type FacebookModule = typeof import("../facebook");
 let mod: FacebookModule;
 
 const originalOpen = Object.getOwnPropertyDescriptor(window, "open");
+const originalLocation = Object.getOwnPropertyDescriptor(window, "location");
 
 /** Make `window.open` return `returnValue` (the probe result). */
 function stubOpen(returnValue: unknown) {
@@ -24,6 +25,10 @@ function stubSdk(login: FacebookSdk["login"]): void {
 beforeEach(async () => {
   vi.resetModules();
   mod = await import("../facebook");
+  Object.defineProperty(window, "location", {
+    value: { protocol: "https:" },
+    configurable: true,
+  });
   delete window.FB;
   delete window.fbAsyncInit;
   document.getElementById("facebook-jssdk")?.remove();
@@ -32,6 +37,8 @@ beforeEach(async () => {
 afterEach(() => {
   if (originalOpen) Object.defineProperty(window, "open", originalOpen);
   else delete (window as { open?: unknown }).open;
+  if (originalLocation) Object.defineProperty(window, "location", originalLocation);
+  else delete (window as { location?: unknown }).location;
   delete window.FB;
   delete window.fbAsyncInit;
   document.getElementById("facebook-jssdk")?.remove();
@@ -129,6 +136,18 @@ describe("facebookPopupLogin", () => {
     stubSdk((callback) => callback({ authResponse: { accessToken: "t" } }));
 
     await expect(mod.facebookPopupLogin("app-1")).resolves.toBe("unavailable");
+  });
+
+  it("does not call FB.login on an HTTP page", async () => {
+    Object.defineProperty(window, "location", {
+      value: { protocol: "http:" },
+      configurable: true,
+    });
+    const login = vi.fn();
+    stubSdk(login);
+
+    await expect(mod.facebookPopupLogin("app-1")).resolves.toBe("unavailable");
+    expect(login).not.toHaveBeenCalled();
   });
 
   it("falls back when the SDK cannot load", async () => {

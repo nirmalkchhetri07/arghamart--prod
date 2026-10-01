@@ -180,6 +180,7 @@ export async function facebookPopupLogin(
   appId: string,
 ): Promise<FacebookLoginOutcome> {
   if (typeof window === "undefined") return "unavailable";
+  if (window.location.protocol !== "https:") return "unavailable";
 
   let sdk: FacebookSdk;
   try {
