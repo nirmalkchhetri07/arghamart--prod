@@ -48,6 +48,7 @@ Rails.application.config.after_initialize do
   require_dependency Rails.root.join('app/models/spree/role_permissions').to_s
   require_dependency Rails.root.join('app/controllers/spree/admin/roles_controller_decorator').to_s
   require_dependency Rails.root.join('app/controllers/spree/admin/admin_users_controller_decorator').to_s
+  require_dependency Rails.root.join('app/subscribers/ncm/order_completed_subscriber').to_s
   Spree::Role.prepend(Spree::RolePermissions::RoleDecorator)
   Spree::Ability.prepend(Spree::RolePermissions::AbilityDecorator)
   Spree::PermissionSets::StockManagement.prepend(Spree::PermissionSets::StockManagementDecorator)
@@ -57,6 +58,7 @@ Rails.application.config.after_initialize do
   Spree::Admin::RolesController.prepend(Spree::Admin::RolesControllerDecorator)
   Spree::Admin::AdminUsersController.prepend(Spree::Admin::AdminUsersControllerDecorator)
   Spree::PermissionSets::ConfigurationManagement.prepend(Spree::PermissionSets::ConfigurationManagementDecorator)
+  Spree.subscribers << Ncm::OrderCompletedSubscriber unless Spree.subscribers.include?(Ncm::OrderCompletedSubscriber)
 
   Rails.application.reloader.to_prepare do
     require_dependency Rails.root.join('app/models/spree/permission_sets/staff_order_desk').to_s
@@ -65,6 +67,7 @@ Rails.application.config.after_initialize do
     require_dependency Rails.root.join('app/models/spree/role_permissions').to_s
     require_dependency Rails.root.join('app/controllers/spree/admin/roles_controller_decorator').to_s
     require_dependency Rails.root.join('app/controllers/spree/admin/admin_users_controller_decorator').to_s
+    require_dependency Rails.root.join('app/subscribers/ncm/order_completed_subscriber').to_s
     Spree::Role.prepend(Spree::RolePermissions::RoleDecorator) unless Spree::Role < Spree::RolePermissions::RoleDecorator
     Spree::Ability.prepend(Spree::RolePermissions::AbilityDecorator) unless Spree::Ability < Spree::RolePermissions::AbilityDecorator
     Spree::PermissionSets::StockManagement.prepend(Spree::PermissionSets::StockManagementDecorator) unless Spree::PermissionSets::StockManagement < Spree::PermissionSets::StockManagementDecorator

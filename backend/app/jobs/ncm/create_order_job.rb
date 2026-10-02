@@ -6,7 +6,7 @@ module Ncm
     queue_as :default
 
     def perform(shipment_id)
-      shipment = Spree::Shipment.includes(order: :shipping_address).find(shipment_id)
+      shipment = Spree::Shipment.includes(order: :ship_address).find(shipment_id)
 
       shipment.with_lock do
         return if shipment.ncm_order_id.present?
@@ -19,7 +19,8 @@ module Ncm
         response = Ncm::Client.new(environment: partner.environment, api_token: partner.api_token).create_order(
           name: [address.firstname, address.lastname].compact_blank.join(' '),
           phone: address.phone,
-          address: address.full_address,
+          address: [address.address1, address.address2, address.city, address.district&.name,
+                    address.province&.name].compact_blank.join(', '),
           fbranch: partner.default_pickup_branch,
           branch: branch,
           cod_charge: shipment.ncm_cod_charge.to_s,
@@ -30,8 +31,12 @@ module Ncm
           instruction: shipment.order.customer_note.to_s
         )
 
-        shipment.update!(ncm_order_id: response.fetch('orderid').to_s, ncm_sent_at: Time.current,
-                         ncm_status: 'Pickup Order Created')
+        # NOTE: assign + save! instead of update! — Spree::Shipment overrides
+        # update!(order) with a state-recalculation signature that takes an
+        # order, not an attributes hash.
+        shipment.assign_attributes(ncm_order_id: response.fetch('orderid').to_s, ncm_sent_at: Time.current,
+                                   ncm_status: 'Pickup Order Created')
+        shipment.save!
       end
     end
   end

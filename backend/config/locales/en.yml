@@ -16,7 +16,7 @@ en:
         send_to_ncm: "Send to NCM"
         queued: "Shipment queued for NCM."
         already_sent: "Shipment has already been sent to NCM."
-        branch_missing: "Map this district to an NCM branch before sending."
+        branch_missing: "Map this district to an NCM branch under Settings → Manage address before sending."
         not_configured: "Configure and activate NCM before sending shipments."
       delivery_partners:
         title: "Delivery Partner"
@@ -85,6 +85,7 @@ en:
         district_updated: "District updated."
         district_deleted: "District deleted."
         district_delete_blocked_hint: "Deactivate it instead to hide it from checkout without breaking history."
+        ncm_branches_not_synced: "NCM branches have not been synced yet, so the branch dropdowns below are empty. Configure Nepal Can Move and run “Test connection and sync branches” first, then map each district to its NCM branch."
         district_activated: "District activated — it now appears in checkout."
         district_deactivated: "District deactivated — it no longer appears in checkout."
         fee_updated: "Shipping fee updated."

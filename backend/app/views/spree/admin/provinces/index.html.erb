@@ -4,6 +4,19 @@
 <% end %>
 
 <div class="flex flex-col gap-4">
+  <%# The NCM branch dropdowns below are fed from the synced branch list. If
+      it was never synced (e.g. "Test connection" was never run), mapping a
+      district is impossible — say so up front instead of showing empty selects. %>
+  <% ncm_branch_options = Spree::DeliveryPartner.find_by(provider: 'ncm')&.branch_names || [] %>
+  <% if ncm_branch_options.empty? %>
+    <div class="card">
+      <div class="card-body flex items-center justify-between gap-4">
+        <p class="text-sm text-gray-600 mb-0"><%= Spree.t('admin.nepal.ncm_branches_not_synced') %></p>
+        <%= link_to Spree.t('admin.delivery_partners.configure_ncm'),
+              spree.edit_admin_delivery_partner_path('ncm'), class: 'btn btn-sm btn-primary flex-shrink-0' %>
+      </div>
+    </div>
+  <% end %>
   <% @provinces.each do |province| %>
     <%= turbo_frame_tag dom_id(province), class: "card" do %>
       <div class="card-header items-center justify-between">
@@ -42,7 +55,7 @@
                 <%= f.hidden_field :province_id %>
                 <%= f.text_field :name, value: district.name, class: "form-control form-control-sm", aria_label: district.name, required: true %>
                 <%= f.select :ncm_branch,
-                      options_for_select((Spree::DeliveryPartner.find_by(provider: 'ncm')&.branch_names || []).map { |branch| [branch, branch] }, district.ncm_branch),
+                      options_for_select(ncm_branch_options.map { |branch| [branch, branch] }, district.ncm_branch),
                       { include_blank: 'NCM branch' }, class: "form-control form-control-sm" %>
                 <%= f.submit Spree.t(:update), class: "btn btn-sm btn-light" %>
               <% end %>
@@ -73,7 +86,7 @@
                   placeholder: Spree.t('admin.nepal.district_name_placeholder'),
                   aria_label: Spree.t('admin.nepal.district_name_placeholder'), required: true %>
             <%= f.select :ncm_branch,
-              options_for_select((Spree::DeliveryPartner.find_by(provider: 'ncm')&.branch_names || []).map { |branch| [branch, branch] }),
+              options_for_select(ncm_branch_options.map { |branch| [branch, branch] }),
               { include_blank: 'NCM branch' }, class: "form-control form-control-sm" %>
             <%= f.submit Spree.t('admin.nepal.add_district'), class: "btn btn-sm btn-primary" %>
           <% end %>
