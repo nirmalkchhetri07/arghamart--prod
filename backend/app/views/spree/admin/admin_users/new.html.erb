@@ -1,0 +1,24 @@
+<%# App override of spree_admin's new.html.erb — identical except the submit
+    button, which shows a "Creating account..." state while submitting
+    (data-turbo-submits-with disables the button after the first click). %>
+<%= form_with model: @admin_user, url: spree.admin_admin_users_path(token: @invitation.token), method: :post, scope: :admin_user do |f| %>
+      <%= render partial: 'spree/admin/shared/error_messages', locals: { target: @admin_user } %>
+
+      <div class="rounded-md border p-6 mb-6 flex items-center gap-2">
+        <%= render_avatar(@invitation.inviter, height: 32, width: 32) %>
+        <%= Spree.t('admin.invitations.invited_you_to_join_html', inviter: tag.strong(@invitation.inviter.name), resource: tag.strong(@invitation.resource.name)) %>
+      </div>
+
+      <%= render 'form', f: f %>
+      <div class="form-group">
+        <%= f.label :password %>
+        <%= f.password_field :password, class: 'form-input', required: true %>
+      </div>
+      <div class="form-group">
+        <%= f.label :password_confirmation %>
+        <%= f.password_field :password_confirmation, class: 'form-input', required: true %>
+      </div>
+
+    <%= turbo_save_button_tag(Spree.t('create_a_new_account'),
+                              'data-turbo-submits-with' => "#{content_tag(:span, '', class: 'inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin', role: 'status')} #{Spree.t('admin.invitations.creating_account')}") %>
+<% end %>
