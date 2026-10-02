@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  scope module: :webhooks, path: :webhooks do
+    post 'ncm/:secret', to: 'ncm#create'
+  end
+
   Spree::Core::Engine.add_routes do
     # Admin authentication
     devise_for(
