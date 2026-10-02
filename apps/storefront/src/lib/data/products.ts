@@ -93,12 +93,15 @@ export async function getProduct(
 ) {
   const options = await getLocaleOptions();
   const userToken = await getAccessToken();
-  return cachedGetProduct(
+  return getClientForSurface(surface).products.get(
     slugOrId,
-    params?.expand ?? [],
-    options,
-    surface,
-    userToken,
+    { expand: params?.expand ?? [] },
+    {
+      ...options,
+      ...(surface === "wholesale" && userToken
+        ? { token: userToken }
+        : undefined),
+    },
   );
 }
 

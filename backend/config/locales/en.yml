@@ -1,4 +1,24 @@
 en:
+  admin:
+    delivery_partners:
+      title: "Delivery Partners"
+      ncm: "Nepal Can Move"
+      ncm_description: "Send shipments to Nepal Can Move."
+      configured: "Configured"
+      not_configured: "Not configured"
+      configure: "Configure"
+      configure_ncm: "Configure Nepal Can Move"
+      updated: "Delivery partner settings updated."
+      connection_succeeded: "NCM connection succeeded and branches were synced."
+      test_connection: "Test connection and sync branches"
+      branches_synced: "%{count} NCM branches synced."
+      environment: "Environment"
+      sandbox_token: "Sandbox API token"
+      production_token: "Production API token"
+      token_keep_hint: "Leave blank to keep the stored token"
+      default_pickup_branch: "Default pickup branch"
+      webhook_secret: "Webhook secret"
+      active: "Active"
   hello: "Hello world"
   spree:
     # "Delivered" tracking layered on top of the shipment state machine
@@ -12,32 +32,6 @@ en:
       delivered: "Delivered"
     # Manual QR payments (see Spree::PaymentMethod::ManualQr).
     admin:
-      ncm:
-        send_to_ncm: "Send to NCM"
-        queued: "Shipment queued for NCM."
-        already_sent: "Shipment has already been sent to NCM."
-        branch_missing: "Map this district to an NCM branch under Settings → Manage address before sending."
-        not_configured: "Configure and activate NCM before sending shipments."
-      delivery_partners:
-        title: "Delivery Partner"
-        ncm: "Nepal Can Move"
-        ncm_description: "Send shipments to Nepal Can Move."
-        configured: "Configured"
-        not_configured: "Not configured"
-        configure: "Configure"
-        configure_ncm: "Configure Nepal Can Move"
-        updated: "Delivery partner settings updated."
-        connection_succeeded: "NCM connection succeeded and branches were synced."
-        test_connection: "Test connection and sync branches"
-        branches_synced: "%{count} NCM branches synced."
-        environment: "Environment"
-        sandbox_token: "Sandbox API token"
-        production_token: "Production API token"
-        token_keep_hint: "Leave blank to keep the stored token"
-        default_pickup_branch: "Default pickup branch"
-        webhook_secret: "Webhook secret"
-        webhook_url: "Webhook URL"
-        active: "Active"
       manual_qr:
         approved: "QR payment approved and completed."
         cannot_approve: "Only a pending Manual QR payment can be approved."
@@ -85,7 +79,6 @@ en:
         district_updated: "District updated."
         district_deleted: "District deleted."
         district_delete_blocked_hint: "Deactivate it instead to hide it from checkout without breaking history."
-        ncm_branches_not_synced: "NCM branches have not been synced yet, so the branch dropdowns below are empty. Configure Nepal Can Move and run “Test connection and sync branches” first, then map each district to its NCM branch."
         district_activated: "District activated — it now appears in checkout."
         district_deactivated: "District deactivated — it no longer appears in checkout."
         fee_updated: "Shipping fee updated."
@@ -153,13 +146,6 @@ en:
         transaction_id: "Customer transaction ID: %{transaction_id}"
         action: "Review payment"
         footer: "This alert was sent automatically when the screenshot was uploaded. Approve the payment only after checking the amount and transaction ID."
-    shipment_mailer:
-      delivered:
-        subject: "%{store}: your order #%{number} has been delivered"
-        title: "Your order has been delivered"
-        greeting: "Your order from %{store} has been marked as delivered."
-        order_line: "Order: #%{number}"
-        status_line: "We hope you enjoy your purchase."
     # Labels for the Manual QR preferences (rendered by the admin form's
     # preference_fields helper, which looks up Spree.t(<preference key>).
     alert_emails: "Alert emails"

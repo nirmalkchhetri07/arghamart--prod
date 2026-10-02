@@ -7,9 +7,9 @@
 <%= form_with model: @partner, url: spree.admin_delivery_partner_path(@partner.provider), method: :patch do |f| %>
   <div class="card mb-4">
     <div class="card-body flex flex-col gap-3">
-      <div class="form-group flex flex-col gap-1">
+      <div class="form-group">
         <%= f.label :environment, Spree.t('admin.delivery_partners.environment') %>
-        <%= f.select :environment, [['Sandbox', 'sandbox'], ['Production', 'production']], {}, class: 'form-input w-full' %>
+        <%= f.select :environment, [['Sandbox', 'sandbox'], ['Production', 'production']], {}, class: 'form-input' %>
       </div>
       <div class="form-group">
         <%= f.label :sandbox_api_token, Spree.t('admin.delivery_partners.sandbox_token') %>
@@ -25,11 +25,8 @@
       </div>
       <div class="form-group">
         <%= f.label :webhook_secret, Spree.t('admin.delivery_partners.webhook_secret') %>
-        <%= f.text_field :webhook_secret, value: @partner.webhook_secret, class: 'form-input', disabled: true %>
-        <%= f.label :webhook_url, Spree.t('admin.delivery_partners.webhook_url') %>
-        <% public_host = ENV.fetch('RAILS_HOST', request.host_with_port).sub(%r{\Ahttps?://}, '').sub(%r{/\z}, '') %>
-        <% public_protocol = ENV.fetch('RAILS_PROTOCOL', request.ssl? ? 'https' : 'http') %>
-        <%= text_field_tag :webhook_url, "#{public_protocol}://#{public_host}/webhooks/ncm/#{@partner.webhook_secret}", class: 'form-input', readonly: true %>
+        <%= f.text_field :webhook_secret, value: @partner.webhook_secret, class: 'form-input', readonly: true %>
+        <small class="form-text text-muted"><%= request.base_url %>/webhooks/ncm/<%= @partner.webhook_secret %></small>
       </div>
       <label class="flex items-center gap-2 text-sm">
         <%= f.check_box :active %>
@@ -37,7 +34,7 @@
       </label>
     </div>
   </div>
-  <%= f.submit 'Save', class: 'btn btn-primary' %>
+  <%= f.submit Spree.t(:save), class: 'btn btn-primary' %>
 <% end %>
 
 <%= button_to Spree.t('admin.delivery_partners.test_connection'),
