@@ -102,13 +102,15 @@
     <% end %>
 
     <% deliverable = can?(:update, shipment) && show_mark_as_delivered?(shipment, order) %>
-    <% if can_ship?(shipment) || deliverable || (can?(:update, shipment) && shipment.ncm_order_id.blank?) %>
+    <% sendable_to_ncm = can?(:update, shipment) && !shipment.shipped? && shipment.ncm_order_id.blank? %>
+    <% if can_ship?(shipment) || deliverable || sendable_to_ncm || (can?(:update, shipment) && !shipment.digital? && !shipment.shipped?) %>
       <div class="card-footer flex justify-end border-t bg-gray-25">
-        <% if shipment.ncm_order_id.blank? && can?(:update, shipment) %>
-          <%= link_to_with_icon 'send', Spree.t('admin.ncm.send_to_ncm'), spree.send_to_ncm_admin_order_shipment_path(order, shipment), class: 'ms-auto btn btn-primary mb-0', data: { turbo_method: :post, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: '_top' } %>
-        <% elsif deliverable %>
+        <% if sendable_to_ncm %>
+          <%= link_to_with_icon 'send', Spree.t('admin.ncm.send_to_ncm'), spree.send_to_ncm_admin_order_shipment_path(order, shipment), class: 'btn btn-primary mb-0', data: { turbo_method: :post, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: '_top' } %>
+        <% end %>
+        <% if deliverable %>
           <%= link_to_with_icon 'check', Spree.t(:mark_as_delivered), spree.mark_as_delivered_admin_order_shipment_path(order, shipment), class: 'ms-auto btn btn-primary mb-0', data: {turbo_method: :post, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: '_top'} %>
-        <% elsif shipment.tracked? %>
+        <% elsif can_ship?(shipment) %>
           <%= link_to_with_icon 'send.svg', Spree.t(:ship), spree.ship_admin_order_shipment_path(order, shipment), class: 'ms-auto btn btn-primary mb-0', data: {turbo_method: :post, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: '_top'} %>
         <% elsif !shipment.digital? %>
           <span class="ship ms-auto btn btn-primary disabled mb-0" data-controller="tooltip" data-tooltip-placement-value="left">

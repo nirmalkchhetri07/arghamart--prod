@@ -41,6 +41,32 @@ RSpec.describe 'Admin shipments delivery tracking', type: :request do
   end
 
   describe 'admin order page' do
+    it 'shows Send to NCM and Ship actions for a ready shipment' do
+      ready_order = create(:order_ready_to_ship, store: store)
+
+      get "/admin/orders/#{ready_order.to_param}"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Send to NCM')
+      expect(response.body).to include('Ship')
+    end
+
+    it 'shows Mark as Delivered after the shipment is shipped' do
+      ready_shipment = create(:order_ready_to_ship, store: store).shipments.first
+      ready_shipment.assign_attributes(tracking: 'TRACK-123')
+      ready_shipment.save!
+
+      post "#{shipment_path(ready_shipment)}/ship"
+
+      expect(ready_shipment.reload.state).to eq('shipped')
+
+      get "/admin/orders/#{ready_shipment.order.to_param}"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Mark as Delivered')
+      expect(response.body).not_to include('Send to NCM')
+    end
+
     it 'shows the Delivered badge once delivered' do
       shipment.mark_as_delivered!
 
