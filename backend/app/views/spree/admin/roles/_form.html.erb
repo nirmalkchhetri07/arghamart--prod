@@ -1,0 +1,59 @@
+<div class="card mb-6" data-controller="permission-sets">
+  <div class="card-body">
+    <%= f.spree_text_field :name, required: true %>
+
+    <% unless f.object.name == Spree::Role::ADMIN_ROLE %>
+      <% admin_only_areas = Spree::RolePermissions.admin_only_areas %>
+      <fieldset class="mt-4">
+        <legend class="form-label"><%= Spree.t(:permission_sets) %></legend>
+        <div class="flex flex-wrap gap-2 mb-4" data-permission-sets-target="chips"></div>
+
+        <div class="card bg-gray-25 mb-4">
+          <div class="card-body py-3">
+            <h3 class="font-semibold mb-2"><%= Spree.t(:what_this_role_can_access, default: 'What this role can access') %></h3>
+            <ul class="list-disc pl-5 text-sm" data-permission-sets-target="accessPanel"></ul>
+            <div class="mt-3 text-sm" data-permission-sets-target="warnings"></div>
+            <% if admin_only_areas.any? %>
+              <p class="text-muted text-sm mt-3 mb-0">
+                <%= Spree.t(:not_available_to_non_admin, default: 'Not available to any non-admin role') %>:
+                <%= admin_only_areas.to_sentence %>.
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <%= hidden_field_tag 'role[permission_set_names][]', '' %>
+        <% Spree::RolePermissions::GROUPS.each do |group, permission_sets| %>
+          <div class="border rounded-md p-3 mb-3" data-permission-group="<%= group %>">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold"><%= group %></h3>
+              <label class="flex items-center gap-2 text-sm">
+                <%= check_box_tag nil, '1', false, data: { action: 'change->permission-sets#toggleGroup', permission_sets_target: 'groupToggle' } %>
+                <span><%= Spree.t(:select_all, default: 'Select all') %></span>
+              </label>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <% permission_sets.each do |permission_set| %>
+                <% metadata = Spree::RolePermissions::META.fetch(permission_set) %>
+                <label class="flex items-start gap-2 text-sm" data-permission-set-row="<%= permission_set %>">
+                  <%= check_box_tag 'role[permission_set_names][]', permission_set,
+                        f.object.selected_permission_sets.include?(permission_set),
+                        id: "role_permission_set_#{permission_set}",
+                        data: {
+                          action: 'change->permission-sets#change',
+                          permission_sets_target: 'checkbox',
+                          permission_set: permission_set,
+                          implies: metadata.fetch(:implies, []).join(','),
+                          areas: metadata[:areas].to_json,
+                          warning: metadata[:warning]
+                        } %>
+                  <span><%= metadata[:label] %></span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </fieldset>
+    <% end %>
+  </div>
+</div>

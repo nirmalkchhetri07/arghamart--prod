@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_000008) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_000009) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1763,6 +1763,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000008) do
   create_table "spree_roles", force: :cascade do |t|
     t.datetime "created_at", precision: nil
     t.string "name"
+    t.text "permission_set_names"
     t.datetime "updated_at", precision: nil
     t.index ["name"], name: "index_spree_roles_on_name", unique: true
   end

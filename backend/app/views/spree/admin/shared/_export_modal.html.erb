@@ -1,0 +1,13 @@
+<%# Override of spree_admin's shared/_export_modal. Core renders the dialog's
+    turbo frame unconditionally from every index table, while the Export
+    button itself (link_to_export_modal) is gated on `can?(:create,
+    Spree::Export)`. A role without that grant — e.g. a manager — therefore
+    fetched /admin/exports/new on every list page, got a 302 from
+    authorize_admin, and flashed "Authorization Failure" on the next
+    navigation. Gate the frame with the same check as the button so the two
+    stay in sync. %>
+<% if can?(:create, Spree::Export) %>
+  <%= dialog(id: 'export-dialog', controller_name: 'export-dialog') do %>
+    <%= turbo_frame_tag :export_dialog, src: spree.new_admin_export_path(export: { search_params: params[:q]&.to_json, type: export_type }) %>
+  <% end %>
+<% end %>

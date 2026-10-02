@@ -57,8 +57,10 @@ x-app: &app
     # MEILISEARCH_URL: http://meilisearch:7700
     # All outgoing mail is captured by Mailpit — read it at http://localhost:8025.
     # Set SMTP_HOST (and friends) in .env to deliver through a real provider instead.
-    SMTP_HOST: ${SMTP_HOST:-mailpit}
-    SMTP_PORT: ${SMTP_PORT:-1025}
+    # Development mail is captured locally. Production reads SMTP settings from
+    # .env.production instead.
+    SMTP_HOST: mailpit
+    SMTP_PORT: "1025"
     # RAILS_ENV / BUNDLE_* are baked into the dev image (Dockerfile dev stage).
     BOOTSNAP_CACHE_DIR: /rails/tmp/cache/bootsnap
   volumes:

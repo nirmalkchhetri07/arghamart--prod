@@ -65,7 +65,9 @@ export async function getOauthProviders(): Promise<OauthProviderInfo[]> {
       next: { revalidate: 300, tags: ["oauth-providers"] },
     });
     if (!response.ok) return [];
-    const body = await readJsonResponse<{ data?: OauthProviderInfo[] }>(response);
+    const body = await readJsonResponse<{ data?: OauthProviderInfo[] }>(
+      response,
+    );
     return Array.isArray(body.data) ? body.data : [];
   } catch {
     return [];

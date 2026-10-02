@@ -28,7 +28,8 @@ beforeEach(async () => {
 afterEach(() => {
   if (originalOpen) Object.defineProperty(window, "open", originalOpen);
   else delete (window as { open?: unknown }).open;
-  if (originalLocation) Object.defineProperty(window, "location", originalLocation);
+  if (originalLocation)
+    Object.defineProperty(window, "location", originalLocation);
   else delete (window as { location?: unknown }).location;
   delete window.FB;
   delete window.fbAsyncInit;

@@ -42,6 +42,44 @@ end
 Spree::Api::Config[:max_request_body_size] = 6.megabytes
 
 Rails.application.config.after_initialize do
+  require_dependency Rails.root.join('app/models/spree/permission_sets/staff_order_desk').to_s
+  require_dependency Rails.root.join('app/models/spree/permission_sets/additional_admin_access').to_s
+  require_dependency Rails.root.join('app/models/spree/permission_sets/configuration_management_decorator').to_s
+  require_dependency Rails.root.join('app/models/spree/role_permissions').to_s
+  require_dependency Rails.root.join('app/controllers/spree/admin/roles_controller_decorator').to_s
+  require_dependency Rails.root.join('app/controllers/spree/admin/admin_users_controller_decorator').to_s
+  Spree::Role.prepend(Spree::RolePermissions::RoleDecorator)
+  Spree::Ability.prepend(Spree::RolePermissions::AbilityDecorator)
+  Spree::PermissionSets::StockManagement.prepend(Spree::PermissionSets::StockManagementDecorator)
+  Spree::PermissionSets::OrderManagement.prepend(Spree::PermissionSets::OrderManagementDecorator)
+  Spree::PermissionSets::UserManagement.prepend(Spree::PermissionSets::UserManagementDecorator)
+  Spree::PermissionSets::DashboardDisplay.prepend(Spree::PermissionSets::DashboardDisplayDecorator)
+  Spree::Admin::RolesController.prepend(Spree::Admin::RolesControllerDecorator)
+  Spree::Admin::AdminUsersController.prepend(Spree::Admin::AdminUsersControllerDecorator)
+  Spree::PermissionSets::ConfigurationManagement.prepend(Spree::PermissionSets::ConfigurationManagementDecorator)
+
+  Rails.application.reloader.to_prepare do
+    require_dependency Rails.root.join('app/models/spree/permission_sets/staff_order_desk').to_s
+    require_dependency Rails.root.join('app/models/spree/permission_sets/additional_admin_access').to_s
+    require_dependency Rails.root.join('app/models/spree/permission_sets/configuration_management_decorator').to_s
+    require_dependency Rails.root.join('app/models/spree/role_permissions').to_s
+    require_dependency Rails.root.join('app/controllers/spree/admin/roles_controller_decorator').to_s
+    require_dependency Rails.root.join('app/controllers/spree/admin/admin_users_controller_decorator').to_s
+    Spree::Role.prepend(Spree::RolePermissions::RoleDecorator) unless Spree::Role < Spree::RolePermissions::RoleDecorator
+    Spree::Ability.prepend(Spree::RolePermissions::AbilityDecorator) unless Spree::Ability < Spree::RolePermissions::AbilityDecorator
+    Spree::PermissionSets::StockManagement.prepend(Spree::PermissionSets::StockManagementDecorator) unless Spree::PermissionSets::StockManagement < Spree::PermissionSets::StockManagementDecorator
+    Spree::PermissionSets::OrderManagement.prepend(Spree::PermissionSets::OrderManagementDecorator) unless Spree::PermissionSets::OrderManagement < Spree::PermissionSets::OrderManagementDecorator
+    Spree::PermissionSets::UserManagement.prepend(Spree::PermissionSets::UserManagementDecorator) unless Spree::PermissionSets::UserManagement < Spree::PermissionSets::UserManagementDecorator
+    unless Spree::PermissionSets::DashboardDisplay < Spree::PermissionSets::DashboardDisplayDecorator
+      Spree::PermissionSets::DashboardDisplay.prepend(Spree::PermissionSets::DashboardDisplayDecorator)
+    end
+    Spree::Admin::RolesController.prepend(Spree::Admin::RolesControllerDecorator) unless Spree::Admin::RolesController < Spree::Admin::RolesControllerDecorator
+    Spree::Admin::AdminUsersController.prepend(Spree::Admin::AdminUsersControllerDecorator) unless Spree::Admin::AdminUsersController < Spree::Admin::AdminUsersControllerDecorator
+    unless Spree::PermissionSets::ConfigurationManagement < Spree::PermissionSets::ConfigurationManagementDecorator
+      Spree::PermissionSets::ConfigurationManagement.prepend(Spree::PermissionSets::ConfigurationManagementDecorator)
+    end
+  end
+
   Spree.payment_methods << Spree::PaymentMethod::Esewa
   Spree.payment_methods << Spree::PaymentMethod::Khalti
   Spree.payment_methods << Spree::PaymentMethod::ManualQr
@@ -73,10 +111,17 @@ Rails.application.config.after_initialize do
   # Role-based permissions
   Spree.permissions.assign(:default, [Spree::PermissionSets::DefaultCustomer])
   Spree.permissions.assign(:admin, [Spree::PermissionSets::SuperUser])
+  manager_sets = Spree::RolePermissions::MANAGER_SETS.filter_map do |name|
+    Spree::RolePermissions::SETS[name]
+  end
+  Spree.permissions.assign(:manager, manager_sets)
+  Spree.permissions.assign(:staff, [Spree::PermissionSets::StaffOrderDesk])
 
   # Nepal delivery pages (Parts 3-4) in the admin sidebar, between Reports
-  # (60) and Integrations (80). SuperUser-only via the manage guards below;
-  # staff without district access simply don't see the section.
+  # (60) and Integrations (80). Visible to the admin (SuperUser) role and to
+  # any role with ConfigurationManagement (see the
+  # permission_sets/configuration_management_decorator); staff without
+  # district access simply don't see the section.
   sidebar = Spree.admin.navigation.sidebar
   sidebar.add :nepal,
               label: 'admin.nepal.section',
@@ -124,6 +169,17 @@ Rails.application.config.after_initialize do
                    position: 87,
                    active: -> { controller_name == 'oauth_providers' },
                    if: -> { can?(:manage, Spree::OauthProvider) }
+
+  # Keep navigation visibility aligned with the focused permission sets.
+  sidebar.update :reports, if: -> { can?(:read, Spree::Report) || can?(:manage, Spree::Report) }
+  settings_nav.update :zones, if: -> {
+    can?(:manage, Spree::Zone) || can?(:manage, Spree::Country) || can?(:manage, Spree::State)
+  }
+  sidebar.update :promotions, if: -> {
+    can?(:manage, Spree::Promotion) || can?(:manage, Spree::GiftCardBatch)
+  }
+  sidebar.update :newsletter_subscribers, if: -> { can?(:manage, Spree::NewsletterSubscriber) }
+  sidebar.update :gift_cards, if: -> { can?(:manage, Spree::GiftCard) || can?(:manage, Spree::GiftCardBatch) }
 end
 
 Spree.user_class = 'Spree::User'

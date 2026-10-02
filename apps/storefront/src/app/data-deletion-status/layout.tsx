@@ -55,7 +55,9 @@ export default function DataDeletionStatusLayout({
         </DocumentShell>
       }
     >
-      <LocalizedDataDeletionStatusShell>{children}</LocalizedDataDeletionStatusShell>
+      <LocalizedDataDeletionStatusShell>
+        {children}
+      </LocalizedDataDeletionStatusShell>
     </Suspense>
   );
 }

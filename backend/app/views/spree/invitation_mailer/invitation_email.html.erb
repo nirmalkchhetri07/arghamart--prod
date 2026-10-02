@@ -1,0 +1,12 @@
+<%= render layout: 'spree/shared/mailer_hero' do %>
+  <h1><%= Spree.t('invitation_mailer.invitation_email.subject', resource_name: @invitation.resource.name) %></h1>
+  <p class="greeting"><%= Spree.t('invitation_mailer.greeting', user_name: @invitation.invitee&.first_name || @invitation.email) %></p>
+  <p><%= Spree.t('invitation_mailer.invitation_email.body', inviter_name: @invitation.inviter.name, resource_name: @invitation.resource.name) %></p>
+  <p><%= Spree.t('invitation_mailer.invitation_email.link_description') %></p>
+  <% configured_rails_host = ENV.fetch('RAILS_HOST', 'localhost') %>
+  <% configured_host = configured_rails_host.sub(%r{\Ahttps?://}, '').sub(%r{/\z}, '') %>
+  <% configured_protocol = ENV.fetch('RAILS_PROTOCOL', configured_rails_host.start_with?('http://') ? 'http' : 'https') %>
+  <% accept_path = spree.admin_invitation_path(@invitation, token: @invitation.token) %>
+  <% accept_url = "#{configured_protocol}://#{configured_host}#{accept_path}" %>
+  <%= render 'spree/shared/mailer_button', url: accept_url, label: Spree.t(:accept) %>
+<% end %>

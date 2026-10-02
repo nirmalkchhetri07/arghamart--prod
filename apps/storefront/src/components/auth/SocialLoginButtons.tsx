@@ -263,12 +263,7 @@ function FacebookLoginButton({
 
 function FacebookBrandIcon() {
   return (
-    <svg
-      aria-hidden="true"
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="10" fill="#1877F2" />
       <path
         fill="#fff"
