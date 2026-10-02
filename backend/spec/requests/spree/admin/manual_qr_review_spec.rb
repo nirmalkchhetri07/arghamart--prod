@@ -132,6 +132,7 @@ RSpec.describe 'Admin Manual QR review', type: :request do
     expect(response.body).to include('Approve')
     expect(response.body).to include('Reject')
     expect(response.body).to include('Pending verification')
+    expect(response.body.scan('alt="Payment screenshot"').size).to eq(1)
   end
 
   # ── Duplicate-proof and amount checks ──────────────────────────────────

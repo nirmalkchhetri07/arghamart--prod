@@ -1,26 +1,7 @@
 en:
-  admin:
-    delivery_partners:
-      title: "Delivery Partners"
-      ncm: "Nepal Can Move"
-      ncm_description: "Send shipments to Nepal Can Move."
-      configured: "Configured"
-      not_configured: "Not configured"
-      configure: "Configure"
-      configure_ncm: "Configure Nepal Can Move"
-      updated: "Delivery partner settings updated."
-      connection_succeeded: "NCM connection succeeded and branches were synced."
-      test_connection: "Test connection and sync branches"
-      branches_synced: "%{count} NCM branches synced."
-      environment: "Environment"
-      sandbox_token: "Sandbox API token"
-      production_token: "Production API token"
-      token_keep_hint: "Leave blank to keep the stored token"
-      default_pickup_branch: "Default pickup branch"
-      webhook_secret: "Webhook secret"
-      active: "Active"
   hello: "Hello world"
   spree:
+    save: "Save"
     # "Delivered" tracking layered on top of the shipment state machine
     # (see Spree::ShipmentDecorator).
     mark_as_delivered: "Mark as Delivered"
@@ -32,6 +13,31 @@ en:
       delivered: "Delivered"
     # Manual QR payments (see Spree::PaymentMethod::ManualQr).
     admin:
+      delivery_partners:
+        title: "Delivery Partners"
+        ncm: "Nepal Can Move"
+        ncm_description: "Send shipments to Nepal Can Move."
+        configured: "Configured"
+        not_configured: "Not configured"
+        configure: "Configure"
+        configure_ncm: "Configure Nepal Can Move"
+        updated: "Delivery partner settings updated."
+        connection_succeeded: "NCM connection succeeded and branches were synced."
+        test_connection: "Test connection and sync branches"
+        branches_synced: "%{count} NCM branches synced."
+        environment: "Environment"
+        sandbox_token: "Sandbox API token"
+        production_token: "Production API token"
+        token_keep_hint: "Leave blank to keep the stored token"
+        default_pickup_branch: "Default pickup branch"
+        webhook_secret: "Webhook secret"
+        active: "Active"
+      ncm:
+        send_to_ncm: "Send to NCM"
+        already_sent: "This shipment has already been sent to NCM."
+        not_configured: "Configure and activate NCM before sending shipments."
+        branch_missing: "This destination district has no NCM branch mapping."
+        queued: "Shipment queued for NCM."
       manual_qr:
         approved: "QR payment approved and completed."
         cannot_approve: "Only a pending Manual QR payment can be approved."

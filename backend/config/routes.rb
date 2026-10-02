@@ -13,9 +13,9 @@ Rails.application.routes.draw do
       router_name: :spree
     )
 
-    # "Delivered" tracking action for shipments (see
-    # Spree::Admin::ShipmentsControllerDecorator). Reopening the resource
-    # only adds this member route — existing shipment routes are untouched.
+    # "Delivered" tracking and explicit NCM dispatch actions for shipments
+    # (see Spree::Admin::ShipmentsControllerDecorator). Reopening the resource
+    # only adds these member routes — existing shipment routes are untouched.
     #
     # Manual QR review actions (see Spree::Admin::PaymentsControllerDecorator)
     # and the storefront proof endpoints (see the ManualQrProofs controllers)
@@ -26,6 +26,7 @@ Rails.application.routes.draw do
         resources :shipments, only: [] do
           member do
             post :mark_as_delivered
+            post :send_to_ncm
           end
         end
         resources :payments, only: [] do
