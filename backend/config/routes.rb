@@ -26,6 +26,7 @@ Rails.application.routes.draw do
         resources :shipments, only: [] do
           member do
             post :mark_as_delivered
+            post :send_to_ncm
           end
         end
         resources :payments, only: [] do
@@ -41,6 +42,15 @@ Rails.application.routes.draw do
       # no gem routes reopened or removed.
       get 'manage-address', to: 'provinces#index', as: :manage_address
       get 'manage-fee', to: 'district_fees#index', as: :manage_fee
+      resources :delivery_partners, only: %i[index] do
+        member do
+          get :edit
+          patch :update
+        end
+        collection do
+          post :test_connection
+        end
+      end
       resources :provinces, only: %i[update]
       resources :districts, only: %i[create update destroy] do
         member do
@@ -123,6 +133,7 @@ Rails.application.routes.draw do
   # We ask that you don't use the :as option here, as Spree relies on it being
   # the default of "spree".
   mount Spree::Core::Engine, at: '/'
+  post 'webhooks/ncm/:secret', to: 'webhooks/ncm#create'
   devise_for :admin_users, class_name: "Spree::AdminUser"
   devise_for :users, class_name: "Spree::User"
 

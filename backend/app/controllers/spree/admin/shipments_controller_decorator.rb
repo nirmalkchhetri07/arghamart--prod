@@ -18,6 +18,22 @@ module Spree
 
         redirect_back fallback_location: spree.edit_admin_order_path(@order)
       end
+
+      # POST /admin/orders/:order_id/shipments/:id/send_to_ncm
+      def send_to_ncm
+        if @shipment.ncm_order_id.present?
+          flash[:notice] = Spree.t('admin.ncm.already_sent')
+        elsif @shipment.order.shipping_address&.district&.ncm_branch.blank?
+          flash[:error] = Spree.t('admin.ncm.branch_missing')
+        elsif Spree::DeliveryPartner.active.find_by(provider: 'ncm').blank?
+          flash[:error] = Spree.t('admin.ncm.not_configured')
+        else
+          Ncm::CreateOrderJob.perform_later(@shipment.id)
+          flash[:success] = Spree.t('admin.ncm.queued')
+        end
+
+        redirect_back fallback_location: spree.edit_admin_order_path(@order)
+      end
     end
 
     ShipmentsController.prepend ShipmentsControllerDecorator

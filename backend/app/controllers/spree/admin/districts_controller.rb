@@ -70,7 +70,7 @@ module Spree
       end
 
       def district_params
-        params.require(:district).permit(:name, :province_id, :active, :shipping_fee)
+        params.require(:district).permit(:name, :province_id, :active, :shipping_fee, :ncm_branch)
       end
     end
   end

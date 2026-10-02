@@ -9,12 +9,14 @@ module Spree
       module FulfillmentSerializerDecorator
         def self.prepended(base)
           base.typelize delivered_at: [:string, { nullable: true }], delivered: :boolean
+          base.typelize ncm_status: [:string, { nullable: true }]
 
           base.attribute :delivered_at do |shipment|
             shipment.delivered_at&.iso8601
           end
 
           base.attribute :delivered, &:delivered?
+          base.attribute :ncm_status, &:ncm_status
         end
       end
 

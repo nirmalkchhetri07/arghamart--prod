@@ -41,6 +41,9 @@
               <%= form_with model: district, url: spree.admin_district_path(district), method: :patch, class: "flex items-center gap-2" do |f| %>
                 <%= f.hidden_field :province_id %>
                 <%= f.text_field :name, value: district.name, class: "form-control form-control-sm", aria_label: district.name, required: true %>
+                <%= f.select :ncm_branch,
+                      options_for_select((Spree::DeliveryPartner.find_by(provider: 'ncm')&.branch_names || []).map { |branch| [branch, branch] }, district.ncm_branch),
+                      { include_blank: 'NCM branch' }, class: "form-control form-control-sm" %>
                 <%= f.submit Spree.t(:update), class: "btn btn-sm btn-light" %>
               <% end %>
 
@@ -69,6 +72,9 @@
             <%= f.text_field :name, class: "form-control form-control-sm",
                   placeholder: Spree.t('admin.nepal.district_name_placeholder'),
                   aria_label: Spree.t('admin.nepal.district_name_placeholder'), required: true %>
+            <%= f.select :ncm_branch,
+              options_for_select((Spree::DeliveryPartner.find_by(provider: 'ncm')&.branch_names || []).map { |branch| [branch, branch] }),
+              { include_blank: 'NCM branch' }, class: "form-control form-control-sm" %>
             <%= f.submit Spree.t('admin.nepal.add_district'), class: "btn btn-sm btn-primary" %>
           <% end %>
         </div>

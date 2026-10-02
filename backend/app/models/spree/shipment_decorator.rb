@@ -27,6 +27,23 @@ module Spree
       delivered_at.present?
     end
 
+    def ncm_cod_charge
+      return 0.to_d unless order.payments.any? { |payment| payment.payment_method.is_a?(Spree::PaymentMethod::Check) || payment.manual_qr? }
+
+      order.amount_due.to_d.positive? ? order.amount_due.to_d : 0.to_d
+    end
+
+    def ncm_package_description
+      inventory_units.includes(variant: :product).map do |unit|
+        "#{unit.variant.product.name} x#{unit.quantity}"
+      end.join(', ')
+    end
+
+    def ncm_weight
+      weight = inventory_units.sum { |unit| unit.variant.weight.to_d * unit.quantity.to_i }
+      weight.positive? ? weight : ENV.fetch('NCM_DEFAULT_WEIGHT_KG', '1').to_d
+    end
+
     # Marks the shipment as delivered. Only valid once the carrier has the
     # parcel, i.e. the shipment is already in the `shipped` state.
     #

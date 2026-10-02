@@ -18,6 +18,9 @@
           <%= spree_time_ago(shipment.delivered_at) %>
         </small>
       <% end %>
+      <% if shipment.ncm_order_id.present? %>
+        <small class="text-gray-600">NCM #<%= shipment.ncm_order_id %> <%= shipment.ncm_status %></small>
+      <% end %>
     </div>
 
     <span class="flex justify-between items-center gap-2">
@@ -99,9 +102,11 @@
     <% end %>
 
     <% deliverable = can?(:update, shipment) && show_mark_as_delivered?(shipment, order) %>
-    <% if can_ship?(shipment) || deliverable %>
+    <% if can_ship?(shipment) || deliverable || (can?(:update, shipment) && shipment.ncm_order_id.blank?) %>
       <div class="card-footer flex justify-end border-t bg-gray-25">
-        <% if deliverable %>
+        <% if shipment.ncm_order_id.blank? && can?(:update, shipment) %>
+          <%= link_to_with_icon 'send', Spree.t('admin.ncm.send_to_ncm'), spree.send_to_ncm_admin_order_shipment_path(order, shipment), class: 'ms-auto btn btn-primary mb-0', data: { turbo_method: :post, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: '_top' } %>
+        <% elsif deliverable %>
           <%= link_to_with_icon 'check', Spree.t(:mark_as_delivered), spree.mark_as_delivered_admin_order_shipment_path(order, shipment), class: 'ms-auto btn btn-primary mb-0', data: {turbo_method: :post, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: '_top'} %>
         <% elsif shipment.tracked? %>
           <%= link_to_with_icon 'send.svg', Spree.t(:ship), spree.ship_admin_order_shipment_path(order, shipment), class: 'ms-auto btn btn-primary mb-0', data: {turbo_method: :post, turbo_confirm: Spree.t(:are_you_sure), turbo_frame: '_top'} %>

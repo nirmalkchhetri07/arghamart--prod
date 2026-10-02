@@ -24,7 +24,7 @@ module Spree
     scope :active, -> { where(active: true) }
     scope :ordered, -> { joins(:province).order('spree_provinces.position ASC, spree_districts.name ASC') }
 
-    self.whitelisted_ransackable_attributes = %w[name active shipping_fee province_id]
+    self.whitelisted_ransackable_attributes = %w[name active shipping_fee province_id ncm_branch]
 
     # True when a fee has been configured (non-zero). The shipping
     # calculator (Part 5) falls back to the configurable default when this

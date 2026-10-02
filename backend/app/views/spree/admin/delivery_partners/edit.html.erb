@@ -1,0 +1,51 @@
+<%# /admin/delivery-partners/ncm/edit — NCM integration settings. %>
+<% content_for(:page_title) do %>
+  <%= page_header_back_button spree.admin_delivery_partners_path %>
+  <%= Spree.t('admin.delivery_partners.configure_ncm') %>
+<% end %>
+
+<%= form_with model: @partner, url: spree.admin_delivery_partner_path(@partner.provider), method: :patch do |f| %>
+  <div class="card mb-4">
+    <div class="card-body flex flex-col gap-3">
+      <div class="form-group flex flex-col gap-1">
+        <%= f.label :environment, Spree.t('admin.delivery_partners.environment') %>
+        <%= f.select :environment, [['Sandbox', 'sandbox'], ['Production', 'production']], {}, class: 'form-input w-full' %>
+      </div>
+      <div class="form-group">
+        <%= f.label :sandbox_api_token, Spree.t('admin.delivery_partners.sandbox_token') %>
+        <%= f.password_field :sandbox_api_token, value: '', class: 'form-input', autocomplete: 'new-password', placeholder: Spree.t('admin.delivery_partners.token_keep_hint') %>
+      </div>
+      <div class="form-group">
+        <%= f.label :production_api_token, Spree.t('admin.delivery_partners.production_token') %>
+        <%= f.password_field :production_api_token, value: '', class: 'form-input', autocomplete: 'new-password', placeholder: Spree.t('admin.delivery_partners.token_keep_hint') %>
+      </div>
+      <div class="form-group">
+        <%= f.label :default_pickup_branch, Spree.t('admin.delivery_partners.default_pickup_branch') %>
+        <%= f.text_field :default_pickup_branch, class: 'form-input' %>
+      </div>
+      <div class="form-group">
+        <%= f.label :webhook_secret, Spree.t('admin.delivery_partners.webhook_secret') %>
+        <%= f.text_field :webhook_secret, value: @partner.webhook_secret, class: 'form-input', disabled: true %>
+        <%= f.label :webhook_url, Spree.t('admin.delivery_partners.webhook_url') %>
+        <% public_host = ENV.fetch('RAILS_HOST', request.host_with_port).sub(%r{\Ahttps?://}, '').sub(%r{/\z}, '') %>
+        <% public_protocol = ENV.fetch('RAILS_PROTOCOL', request.ssl? ? 'https' : 'http') %>
+        <%= text_field_tag :webhook_url, "#{public_protocol}://#{public_host}/webhooks/ncm/#{@partner.webhook_secret}", class: 'form-input', readonly: true %>
+      </div>
+      <label class="flex items-center gap-2 text-sm">
+        <%= f.check_box :active %>
+        <%= Spree.t('admin.delivery_partners.active') %>
+      </label>
+    </div>
+  </div>
+  <%= f.submit 'Save', class: 'btn btn-primary' %>
+<% end %>
+
+<%= button_to Spree.t('admin.delivery_partners.test_connection'),
+      spree.test_connection_admin_delivery_partners_path,
+      method: :post, class: 'btn btn-light mt-3' %>
+
+<% if @partner.branch_names.any? %>
+  <p class="mt-3 text-sm text-gray-600">
+    <%= Spree.t('admin.delivery_partners.branches_synced', count: @partner.branch_names.size) %>
+  </p>
+<% end %>

@@ -7,6 +7,7 @@ import type { Fulfillment } from "@spree/sdk";
 export type FulfillmentWithDelivery = Fulfillment & {
   delivered?: boolean | null;
   delivered_at?: string | null;
+  ncm_status?: string | null;
 };
 
 export function isFulfillmentDelivered(

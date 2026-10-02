@@ -12,6 +12,32 @@ en:
       delivered: "Delivered"
     # Manual QR payments (see Spree::PaymentMethod::ManualQr).
     admin:
+      ncm:
+        send_to_ncm: "Send to NCM"
+        queued: "Shipment queued for NCM."
+        already_sent: "Shipment has already been sent to NCM."
+        branch_missing: "Map this district to an NCM branch before sending."
+        not_configured: "Configure and activate NCM before sending shipments."
+      delivery_partners:
+        title: "Delivery Partner"
+        ncm: "Nepal Can Move"
+        ncm_description: "Send shipments to Nepal Can Move."
+        configured: "Configured"
+        not_configured: "Not configured"
+        configure: "Configure"
+        configure_ncm: "Configure Nepal Can Move"
+        updated: "Delivery partner settings updated."
+        connection_succeeded: "NCM connection succeeded and branches were synced."
+        test_connection: "Test connection and sync branches"
+        branches_synced: "%{count} NCM branches synced."
+        environment: "Environment"
+        sandbox_token: "Sandbox API token"
+        production_token: "Production API token"
+        token_keep_hint: "Leave blank to keep the stored token"
+        default_pickup_branch: "Default pickup branch"
+        webhook_secret: "Webhook secret"
+        webhook_url: "Webhook URL"
+        active: "Active"
       manual_qr:
         approved: "QR payment approved and completed."
         cannot_approve: "Only a pending Manual QR payment can be approved."

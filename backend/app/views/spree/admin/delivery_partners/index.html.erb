@@ -1,0 +1,24 @@
+<%# /admin/delivery-partners — configured delivery integrations. %>
+<% content_for(:page_title) do %>
+  <%= Spree.t('admin.delivery_partners.title') %>
+<% end %>
+
+<div class="card">
+  <div class="card-body flex items-center justify-between gap-4">
+    <div>
+      <strong class="text-sm text-gray-900"><%= Spree.t('admin.delivery_partners.ncm') %></strong>
+      <p class="text-sm text-gray-600"><%= Spree.t('admin.delivery_partners.ncm_description') %></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <% if @partner.active? %>
+        <span class="badge badge-active"><%= Spree.t(:active) %></span>
+      <% elsif @partner.configured? %>
+        <span class="badge badge-inactive"><%= Spree.t('admin.delivery_partners.configured') %></span>
+      <% else %>
+        <span class="badge badge-inactive"><%= Spree.t('admin.delivery_partners.not_configured') %></span>
+      <% end %>
+      <%= link_to Spree.t('admin.delivery_partners.configure'),
+            spree.edit_admin_delivery_partner_path(@partner.provider), class: 'btn btn-sm btn-primary' %>
+    </div>
+  </div>
+</div>

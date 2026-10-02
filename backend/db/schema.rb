@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_000009) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -363,6 +363,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000009) do
     t.index ["store_id"], name: "index_spree_allowed_origins_on_store_id"
   end
 
+  create_table "spree_analytics_configs", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.string "provider", default: "gtm", null: false
+    t.bigint "store_id", null: false
+    t.string "tracking_id"
+    t.datetime "updated_at", null: false
+    t.index ["store_id"], name: "index_spree_analytics_configs_on_store_id"
+  end
+
   create_table "spree_api_keys", force: :cascade do |t|
     t.bigint "channel_id"
     t.datetime "created_at", null: false
@@ -563,6 +573,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000009) do
     t.index ["store_id"], name: "index_spree_data_feeds_on_store_id"
   end
 
+  create_table "spree_delivery_partners", force: :cascade do |t|
+    t.boolean "active", default: false, null: false
+    t.jsonb "branch_options", default: [], null: false
+    t.datetime "created_at", null: false
+    t.string "default_pickup_branch"
+    t.string "environment", default: "sandbox", null: false
+    t.text "production_api_token"
+    t.string "provider", null: false
+    t.text "sandbox_api_token"
+    t.datetime "updated_at", null: false
+    t.string "webhook_secret", null: false
+    t.index ["active"], name: "index_spree_delivery_partners_on_active", unique: true, where: "(active = true)"
+    t.index ["provider"], name: "index_spree_delivery_partners_on_provider", unique: true
+  end
+
   create_table "spree_digital_links", force: :cascade do |t|
     t.integer "access_counter"
     t.datetime "created_at", precision: nil, null: false
@@ -586,6 +611,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000009) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
+    t.string "ncm_branch"
     t.bigint "province_id", null: false
     t.decimal "shipping_fee", precision: 10, scale: 2, default: "0.0", null: false
     t.datetime "updated_at", null: false
@@ -1776,6 +1802,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000009) do
     t.datetime "created_at", null: false
     t.datetime "delivered_at"
     t.decimal "included_tax_total", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "ncm_order_id"
+    t.datetime "ncm_sent_at"
+    t.string "ncm_status"
     t.decimal "non_taxable_adjustment_total", precision: 10, scale: 2, default: "0.0", null: false
     t.string "number"
     t.bigint "order_id"
@@ -1790,6 +1819,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000009) do
     t.string "tracking"
     t.datetime "updated_at", null: false
     t.index ["address_id"], name: "index_spree_shipments_on_address_id"
+    t.index ["ncm_order_id"], name: "index_spree_shipments_on_ncm_order_id", unique: true, where: "(ncm_order_id IS NOT NULL)"
     t.index ["number"], name: "index_spree_shipments_on_number", unique: true
     t.index ["order_id"], name: "index_spree_shipments_on_order_id"
     t.index ["stock_location_id"], name: "index_spree_shipments_on_stock_location_id"
@@ -2487,6 +2517,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_000009) do
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "spree_addresses", "spree_districts", column: "district_id"
   add_foreign_key "spree_addresses", "spree_provinces", column: "province_id"
+  add_foreign_key "spree_analytics_configs", "spree_stores", column: "store_id"
   add_foreign_key "spree_districts", "spree_provinces", column: "province_id"
   add_foreign_key "spree_oauth_identities", "spree_users", column: "user_id"
   add_foreign_key "spree_option_type_translations", "spree_option_types"

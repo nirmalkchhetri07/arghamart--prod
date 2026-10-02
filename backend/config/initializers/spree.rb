@@ -143,6 +143,14 @@ Rails.application.config.after_initialize do
               if: -> { can?(:manage, Spree::District) }
   end
 
+  sidebar.add :delivery_partners,
+              label: 'admin.delivery_partners.title',
+              url: :admin_delivery_partners_path,
+              icon: 'truck',
+              position: 75,
+              active: -> { controller_name == 'delivery_partners' },
+              if: -> { can?(:manage, Spree::DeliveryPartner) }
+
   # Same pages inside Settings (admin/settings area). The main sidebar
   # switches to the settings nav when a SettingsConcern controller renders,
   # so without these the pages are only reachable by direct URL once the
@@ -169,6 +177,13 @@ Rails.application.config.after_initialize do
                    position: 87,
                    active: -> { controller_name == 'oauth_providers' },
                    if: -> { can?(:manage, Spree::OauthProvider) }
+  settings_nav.add :delivery_partners,
+                   label: 'admin.delivery_partners.title',
+                   url: :admin_delivery_partners_path,
+                   icon: 'truck',
+                   position: 88,
+                   active: -> { controller_name == 'delivery_partners' },
+                   if: -> { can?(:manage, Spree::DeliveryPartner) }
 
   # Keep navigation visibility aligned with the focused permission sets.
   sidebar.update :reports, if: -> { can?(:read, Spree::Report) || can?(:manage, Spree::Report) }
