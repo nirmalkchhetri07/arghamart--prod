@@ -8,6 +8,8 @@ export type FulfillmentWithDelivery = Fulfillment & {
   delivered?: boolean | null;
   delivered_at?: string | null;
   ncm_status?: string | null;
+  ncm_tracking_id?: string | null;
+  ncm_cod_amount?: string | number | null;
 };
 
 export function isFulfillmentDelivered(

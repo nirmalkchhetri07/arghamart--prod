@@ -250,6 +250,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.decimal "latitude"
     t.decimal "longitude"
     t.string "phone"
+    t.string "phone2"
     t.jsonb "private_metadata"
     t.bigint "province_id"
     t.jsonb "public_metadata"
@@ -577,11 +578,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.boolean "active", default: false, null: false
     t.jsonb "branch_options", default: [], null: false
     t.datetime "created_at", null: false
+    t.string "default_delivery_type", default: "Door2Door", null: false
+    t.string "default_destination_policy", default: "mapped", null: false
+    t.string "default_origin_branch", default: "BUTW1", null: false
+    t.string "default_package_type", default: "Parcel", null: false
     t.string "default_pickup_branch"
     t.string "environment", default: "sandbox", null: false
+    t.decimal "fallback_weight_kg", precision: 8, scale: 3, default: "1.0", null: false
+    t.boolean "include_delivery_charge_in_cod", default: true, null: false
+    t.text "instruction_template", default: "{customer_note}", null: false
+    t.text "package_template", default: "{items}", null: false
     t.text "production_api_token"
     t.string "provider", null: false
     t.text "sandbox_api_token"
+    t.string "shop_location", default: "Sandhikharka, Arghakhanchi", null: false
     t.datetime "updated_at", null: false
     t.string "webhook_secret", null: false
     t.index ["active"], name: "index_spree_delivery_partners_on_active", unique: true, where: "(active = true)"
@@ -611,6 +621,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
+    t.jsonb "name_aliases", default: [], null: false
     t.string "ncm_branch"
     t.bigint "province_id", null: false
     t.decimal "shipping_fee", precision: 10, scale: 2, default: "0.0", null: false
@@ -902,6 +913,48 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.index ["type"], name: "index_spree_metafields_on_type"
   end
 
+  create_table "spree_ncm_branch_mappings", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.bigint "branch_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "district_id", null: false
+    t.string "municipality"
+    t.string "source", default: "admin", null: false
+    t.datetime "updated_at", null: false
+    t.index ["branch_id"], name: "index_spree_ncm_branch_mappings_on_branch_id"
+    t.index ["district_id", "municipality", "active"], name: "index_ncm_mappings_on_location"
+    t.index ["district_id"], name: "index_spree_ncm_branch_mappings_on_district_id"
+  end
+
+  create_table "spree_ncm_branches", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.bigint "district_id"
+    t.string "municipality"
+    t.string "name", null: false
+    t.integer "nearest_rank"
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_spree_ncm_branches_on_code", unique: true
+    t.index ["district_id", "municipality", "active"], name: "index_ncm_branches_on_location"
+    t.index ["district_id"], name: "index_spree_ncm_branches_on_district_id"
+  end
+
+  create_table "spree_ncm_delivery_rates", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.decimal "base_rate", precision: 10, scale: 2, null: false
+    t.datetime "created_at", null: false
+    t.string "currency", default: "NPR", null: false
+    t.string "delivery_type", null: false
+    t.bigint "destination_branch_id", null: false
+    t.bigint "origin_branch_id", null: false
+    t.decimal "per_kg_rate", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "updated_at", null: false
+    t.index ["destination_branch_id"], name: "index_spree_ncm_delivery_rates_on_destination_branch_id"
+    t.index ["origin_branch_id", "destination_branch_id", "delivery_type"], name: "index_ncm_rates_on_route_and_type", unique: true
+    t.index ["origin_branch_id"], name: "index_spree_ncm_delivery_rates_on_origin_branch_id"
+  end
+
   create_table "spree_newsletter_subscribers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false
@@ -1100,6 +1153,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.string "last_ip_address"
     t.string "locale"
     t.bigint "market_id"
+    t.decimal "ncm_cod_amount", precision: 10, scale: 2
+    t.decimal "ncm_delivery_charge", precision: 10, scale: 2
+    t.string "ncm_order_id"
+    t.datetime "ncm_sent_at"
+    t.string "ncm_status"
     t.decimal "non_taxable_adjustment_total", precision: 10, scale: 2, default: "0.0", null: false
     t.string "number", limit: 32
     t.string "payment_state"
@@ -1133,6 +1191,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.index ["created_by_id"], name: "index_spree_orders_on_created_by_id"
     t.index ["gift_card_id"], name: "index_spree_orders_on_gift_card_id"
     t.index ["market_id"], name: "index_spree_orders_on_market_id"
+    t.index ["ncm_order_id"], name: "index_spree_orders_on_ncm_order_id", unique: true, where: "(ncm_order_id IS NOT NULL)"
     t.index ["number"], name: "index_spree_orders_on_number", unique: true
     t.index ["preferred_stock_location_id"], name: "index_spree_orders_on_preferred_stock_location_id"
     t.index ["ship_address_id"], name: "index_spree_orders_on_ship_address_id"
@@ -1253,6 +1312,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.bigint "payment_method_id"
     t.jsonb "private_metadata"
     t.jsonb "public_metadata"
+    t.decimal "qr_received_amount", precision: 10, scale: 2
+    t.datetime "qr_received_at"
+    t.bigint "qr_received_by_id"
     t.text "qr_rejection_reason"
     t.string "qr_transaction_id"
     t.string "response_code"
@@ -1264,6 +1326,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.index ["order_id", "payment_method_id", "response_code"], name: "idx_payments_order_method_response_code", unique: true, where: "(response_code IS NOT NULL)"
     t.index ["order_id"], name: "index_spree_payments_on_order_id"
     t.index ["payment_method_id"], name: "index_spree_payments_on_payment_method_id"
+    t.index ["qr_received_by_id"], name: "index_spree_payments_on_qr_received_by_id"
     t.index ["source_id", "source_type"], name: "index_spree_payments_on_source_id_and_source_type"
   end
 
@@ -1433,6 +1496,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.string "meta_keywords"
     t.string "meta_title"
     t.string "name", default: "", null: false
+    t.string "ncm_handling", default: "Non-Fragile", null: false
     t.bigint "primary_media_id"
     t.jsonb "private_metadata"
     t.boolean "promotionable", default: true
@@ -1802,9 +1866,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.datetime "created_at", null: false
     t.datetime "delivered_at"
     t.decimal "included_tax_total", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "ncm_branch_resolution"
+    t.decimal "ncm_cod_amount", precision: 10, scale: 2
+    t.decimal "ncm_delivery_charge", precision: 10, scale: 2
+    t.string "ncm_delivery_type"
+    t.string "ncm_destination_branch"
+    t.text "ncm_failure_message"
+    t.text "ncm_instruction_override"
     t.string "ncm_order_id"
+    t.string "ncm_origin_branch"
+    t.text "ncm_package_override"
+    t.string "ncm_package_type"
+    t.text "ncm_review_reason"
     t.datetime "ncm_sent_at"
     t.string "ncm_status"
+    t.string "ncm_tracking_id"
     t.decimal "non_taxable_adjustment_total", precision: 10, scale: 2, default: "0.0", null: false
     t.string "number"
     t.bigint "order_id"
@@ -2279,6 +2355,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.string "meta_keywords"
     t.string "meta_title"
     t.string "name", null: false
+    t.string "ncm_handling"
     t.bigint "parent_id"
     t.string "permalink"
     t.integer "position", default: 0
@@ -2519,6 +2596,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
   add_foreign_key "spree_addresses", "spree_provinces", column: "province_id"
   add_foreign_key "spree_analytics_configs", "spree_stores", column: "store_id"
   add_foreign_key "spree_districts", "spree_provinces", column: "province_id"
+  add_foreign_key "spree_ncm_branch_mappings", "spree_districts", column: "district_id"
+  add_foreign_key "spree_ncm_branch_mappings", "spree_ncm_branches", column: "branch_id"
+  add_foreign_key "spree_ncm_delivery_rates", "spree_ncm_branches", column: "destination_branch_id"
+  add_foreign_key "spree_ncm_delivery_rates", "spree_ncm_branches", column: "origin_branch_id"
   add_foreign_key "spree_oauth_identities", "spree_users", column: "user_id"
   add_foreign_key "spree_option_type_translations", "spree_option_types"
   add_foreign_key "spree_option_value_translations", "spree_option_values"

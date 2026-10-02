@@ -13,6 +13,7 @@ vi.mock("next-intl", () => ({
       shippingMethod: "Shipping Method",
       canceled: "Canceled",
       trackItems: "Track Items",
+      ncmStatus: "NCM Status",
     };
     return messages[key] ?? key;
   },
@@ -70,5 +71,20 @@ describe("FulfillmentBlock delivery badge", () => {
 
     expect(screen.getByText("pending")).toBeInTheDocument();
     expect(screen.queryByText("Delivered")).not.toBeInTheDocument();
+  });
+
+  it("shows NCM courier status and tracking metadata when present", () => {
+    renderBlock(
+      fulfillment({
+        ncm_status: "Pickup Order Created",
+        ncm_tracking_id: "NCM-12345",
+        ncm_cod_amount: "1200.00",
+      }),
+    );
+
+    expect(screen.getByText("NCM:")).toBeInTheDocument();
+    expect(screen.getByText("Pickup Order Created")).toBeInTheDocument();
+    expect(screen.getByText("NCM-12345")).toBeInTheDocument();
+    expect(document.body).toHaveTextContent(/COD:\s*NPR\s*1,200\.00/);
   });
 });

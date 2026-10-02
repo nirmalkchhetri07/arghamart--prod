@@ -12,7 +12,16 @@ RSpec.describe Ncm::CreateOrderJob, type: :job do
   let(:client) { instance_double(Ncm::Client) }
 
   before do
-    shipment.order.ship_address.update!(country: nepal, district: district, phone: '9841234567')
+    Ncm::BranchCatalog.ensure!
+    district.update!(ncm_branch: 'BUTWAL')
+    shipment.order.ship_address.update!(country: nepal, province: province, district: district, phone: '9841234567')
+    Spree::NcmDeliveryRate.create!(
+      origin_branch: Spree::NcmBranch.find_by!(code: 'BUTW1'),
+      destination_branch: Spree::NcmBranch.find_by!(code: 'BUTW1'),
+      delivery_type: 'Door2Door',
+      base_rate: 75,
+      per_kg_rate: 10
+    )
     allow(Ncm::Client).to receive(:new).and_return(client)
   end
 

@@ -24,6 +24,17 @@ export function FulfillmentBlock({
   lineItems,
 }: FulfillmentBlockProps) {
   const t = useTranslations("orders");
+  const ncmStatus = fulfillment.ncm_status?.trim();
+  const ncmTrackingId = fulfillment.ncm_tracking_id?.trim() || fulfillment.tracking?.trim();
+  const codAmount = fulfillment.ncm_cod_amount;
+  const codValue =
+    codAmount === null || codAmount === undefined || codAmount === ""
+      ? null
+      : `${Number(codAmount).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
       <div className="px-6 py-4 border-b border-gray-200">
@@ -63,6 +74,27 @@ export function FulfillmentBlock({
                 >
                   {fulfillment.status}
                 </span>
+              )}
+
+              {ncmStatus && (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
+                    NCM:
+                  </p>
+                  <p className="text-sm text-amber-900">{ncmStatus}</p>
+                </div>
+              )}
+
+              {ncmTrackingId && (
+                <p className="mt-2 text-xs text-gray-600">
+                  <span className="font-medium">Tracking:</span> {ncmTrackingId}
+                </p>
+              )}
+
+              {codValue && (
+                <p className="mt-2 text-xs text-gray-600">
+                  <span className="font-medium">COD:</span> NPR {codValue}
+                </p>
               )}
             </div>
             <div className="mt-4 lg:mt-0">

@@ -3,14 +3,9 @@
 require 'net/http'
 
 module Ncm
-  # Node equivalent: typed HTTP client/service for the NCM REST API.
+  # Node equivalent: typed HTTP client/service module for the NCM REST API.
   class Client
-    BASE_URLS = {
-      'sandbox' => 'https://demo.nepalcanmove.com',
-      # NCM documentation supplied for this integration documents the demo
-      # host only. Set the production host explicitly before using production.
-      'production' => ENV['NCM_PRODUCTION_BASE_URL']
-    }.freeze
+    DEFAULT_SANDBOX_URL = 'https://demo.nepalcanmove.com'
 
     PATHS = {
       branches: '/api/v2/branches',
@@ -41,9 +36,10 @@ module Ncm
     class NetworkError < Error; end
 
     def initialize(environment:, api_token:)
-      @base_url = BASE_URLS.fetch(environment) do
-        raise ConfigurationError, "Unsupported NCM environment: #{environment}"
-      end
+      raise ConfigurationError, "Unsupported NCM environment: #{environment}" unless %w[sandbox production].include?(environment)
+
+      @base_url = base_url_for(environment)
+      api_token = api_token.presence || credential("#{environment}_api_token")
       raise ConfigurationError, 'NCM production base URL is not configured' if @base_url.blank?
       raise ConfigurationError, 'NCM API token is not configured' if api_token.blank?
 
@@ -96,7 +92,7 @@ module Ncm
       request(Net::HTTP::Post, path, body:, retry_network:)
     end
 
-    def request(http_class, path, params: {}, body: nil, retry_network:)
+    def request(http_class, path, retry_network:, params: {}, body: nil)
       uri = URI.join(@base_url, path)
       uri.query = URI.encode_www_form(params) if params.present?
       request = http_class.new(uri)
@@ -105,6 +101,7 @@ module Ncm
       request.body = JSON.generate(body) if body
 
       response = perform(request, retry_network:)
+      log_exchange(request, params:, body:, response:)
       parse_response(response)
     rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNRESET => e
       raise NetworkError, "NCM request failed: #{e.class}"
@@ -134,6 +131,39 @@ module Ncm
       raise error_class.new("NCM API returned HTTP #{response.code}", response: response)
     rescue JSON::ParserError
       raise UnexpectedResponseError.new('NCM API returned invalid JSON', response: response)
+    end
+
+    def base_url_for(environment)
+      environment_url = ENV["NCM_#{environment.upcase}_BASE_URL"].presence || credential("#{environment}_base_url")
+      environment_url ||= DEFAULT_SANDBOX_URL if environment == 'sandbox'
+      environment_url
+    end
+
+    def credential(key)
+      Rails.application.credentials.dig(:ncm, key.to_sym) if Rails.application.respond_to?(:credentials)
+    end
+
+    def log_exchange(request, params:, body:, response:)
+      request_data = sanitize_for_log(params.presence || body || {})
+      response_data = sanitize_for_log(JSON.parse(response.body.presence || '{}'))
+      Rails.logger.info(
+        "[ncm] #{request.method} #{request.uri.path} request=#{request_data.to_json} " \
+        "status=#{response.code} response=#{response_data.to_json}"
+      )
+    rescue JSON::ParserError
+      Rails.logger.info("[ncm] #{request.method} #{request.uri.path} status=#{response.code} response=[invalid-json]")
+    end
+
+    def sanitize_for_log(value)
+      case value
+      when Hash
+        value.to_h do |key, item|
+          masked = key.to_s.match?(/token|phone|mobile/i) ? '[MASKED]' : sanitize_for_log(item)
+          [key, masked]
+        end
+      when Array then value.map { |item| sanitize_for_log(item) }
+      else value
+      end
     end
   end
 end
