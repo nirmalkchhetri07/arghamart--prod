@@ -1,0 +1,9 @@
+<%= render layout: 'spree/shared/mailer_hero' do %>
+  <h1><%= Spree.t('shipment_mailer.delivered.title') %></h1>
+  <p class="greeting"><%= Spree.t('shipment_mailer.delivered.greeting', store: @current_store.name) %></p>
+
+  <p>
+    <%= Spree.t('shipment_mailer.delivered.order_line', number: @order.number) %><br />
+    <%= Spree.t('shipment_mailer.delivered.status_line') %>
+  </p>
+<% end %>

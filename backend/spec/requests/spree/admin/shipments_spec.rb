@@ -16,7 +16,9 @@ RSpec.describe 'Admin shipments delivery tracking', type: :request do
 
   describe 'POST #mark_as_delivered' do
     it 'marks a shipped shipment as delivered' do
-      post "#{shipment_path(shipment)}/mark_as_delivered"
+      expect do
+        post "#{shipment_path(shipment)}/mark_as_delivered"
+      end.to have_enqueued_mail(Spree::ShipmentMailer, :delivered).with(shipment.id)
 
       expect(response).to have_http_status(:redirect)
       expect(flash[:success]).to eq('Shipment successfully marked as delivered')
@@ -32,11 +34,21 @@ RSpec.describe 'Admin shipments delivery tracking', type: :request do
     it 'refuses a shipment that is not shipped' do
       pending_shipment = create(:order_ready_to_ship, store: store).shipments.first
 
-      post "#{shipment_path(pending_shipment)}/mark_as_delivered"
+      expect do
+        post "#{shipment_path(pending_shipment)}/mark_as_delivered"
+      end.not_to have_enqueued_mail(Spree::ShipmentMailer, :delivered)
 
       expect(response).to have_http_status(:redirect)
       expect(flash[:error]).to eq('Shipment cannot be marked as delivered')
       expect(pending_shipment.reload.delivered_at).to be_nil
+    end
+
+    it 'does not enqueue the email again when already delivered' do
+      shipment.mark_as_delivered!
+
+      expect do
+        post "#{shipment_path(shipment)}/mark_as_delivered"
+      end.not_to have_enqueued_mail(Spree::ShipmentMailer, :delivered)
     end
   end
 

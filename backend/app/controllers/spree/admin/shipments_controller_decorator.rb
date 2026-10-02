@@ -11,6 +11,7 @@ module Spree
         if @shipment.delivered?
           flash[:notice] = Spree.t(:shipment_already_delivered)
         elsif @shipment.shipped? && @shipment.mark_as_delivered!
+          Spree::ShipmentMailer.delivered(@shipment.id).deliver_later if @shipment.order.email.present?
           flash[:success] = Spree.t(:shipment_successfully_delivered)
         else
           flash[:error] = Spree.t(:cannot_mark_as_delivered)

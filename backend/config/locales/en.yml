@@ -153,6 +153,13 @@ en:
         transaction_id: "Customer transaction ID: %{transaction_id}"
         action: "Review payment"
         footer: "This alert was sent automatically when the screenshot was uploaded. Approve the payment only after checking the amount and transaction ID."
+    shipment_mailer:
+      delivered:
+        subject: "%{store}: your order #%{number} has been delivered"
+        title: "Your order has been delivered"
+        greeting: "Your order from %{store} has been marked as delivered."
+        order_line: "Order: #%{number}"
+        status_line: "We hope you enjoy your purchase."
     # Labels for the Manual QR preferences (rendered by the admin form's
     # preference_fields helper, which looks up Spree.t(<preference key>).
     alert_emails: "Alert emails"
